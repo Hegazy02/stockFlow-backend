@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Documentation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f7fa;
+            min-height: 100vh;
+            padding: 0;
+            margin: 0;
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0;
+            background: white;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .nav {
+            background: #2c5364;
+            padding: 20px 40px;
+            border-bottom: 3px solid #1a3a47;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .nav-btn {
+            padding: 10px 20px;
+            background: transparent;
+            border: 2px solid #4a90a4;
+            color: #ffffff;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .nav-btn:hover, .nav-btn.active {
+            background: #4a90a4;
+            color: white;
+            border-color: #5aa5ba;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .section {
+            display: none;
+            animation: fadeIn 0.3s;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .endpoint {
+            background: #f8fafb;
+            border-left: 4px solid #2c5364;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 6px;
+        }
+
+        .endpoint-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .method {
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+        }
+
+        .method.get { background: #10b981; color: white; }
+        .method.post { background: #3b82f6; color: white; }
+        .method.put { background: #f59e0b; color: white; }
+        .method.delete { background: #ef4444; color: white; }
+
+        .endpoint-path {
+            font-family: 'Courier New', monospace;
+            font-size: 1.1rem;
+            color: #495057;
+            font-weight: 600;
+        }
+
+        .endpoint-desc {
+            color: #6c757d;
+            margin-bottom: 15px;
+        }
+
+        .code-block {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            border: 1px solid #334155;
+        }
+
+        .code-block pre {
+            margin: 0;
+        }
+
+        .label {
+            font-weight: 600;
+            color: #495057;
+            margin-top: 15px;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .param-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+
+        .param-table th,
+        .param-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .param-table th {
+            background: #2c5364;
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        .param-table tr:hover {
+            background: #f1f5f9;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge.required { background: #ef4444; color: white; }
+        .badge.optional { background: #64748b; color: white; }
+
+        .status-code {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+            margin-right: 8px;
+        }
+
+        .status-200 { background: #d1fae5; color: #065f46; }
+        .status-201 { background: #dbeafe; color: #1e40af; }
+        .status-400 { background: #fee2e2; color: #991b1b; }
+        .status-404 { background: #fee2e2; color: #991b1b; }
+        .status-500 { background: #fee2e2; color: #991b1b; }
+
+        .footer {
+            background: #1e293b;
+            padding: 20px 40px;
+            text-align: center;
+            color: #cbd5e1;
+            border-top: 3px solid #0f172a;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 12px 20px;
+            border: 2px solid #e9ecef;
+            border-radius: 6px;
+            font-size: 1rem;
+            margin-bottom: 20px;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: #2c5364;
+            box-shadow: 0 0 0 3px rgba(44, 83, 100, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 API Documentation</h1>
+            <p>Complete REST API Reference</p>
+        </div>
+
+        <div class="nav">
+            <button class="nav-btn active" onclick="showSection('overview')">Overview</button>
+            <button class="nav-btn" onclick="showSection('auth')">Authentication</button>
+            <button class="nav-btn" onclick="showSection('categories')">Categories</button>
+            <button class="nav-btn" onclick="showSection('products')">Products</button>
+        </div>
+
+        <div class="content">
+            <!-- Overview Section -->
+            <div id="overview" class="section active">
+                <h2>📖 API Overview</h2>
+                <p style="margin: 20px 0;">Welcome to the API documentation. This API provides endpoints for managing authentication, categories, and products.</p>
+                
+                <div class="endpoint">
+                    <h3>Base URL</h3>
+                    <div class="code-block">
+                        <pre>http://localhost:3000/api</pre>
+                    </div>
+                </div>
+
+                <div class="endpoint">
+                    <h3>Response Format</h3>
+                    <p>All responses follow a consistent JSON format:</p>
+                    <div class="code-block">
+                        <pre>{
+  "success": true,
+  "message": "Operation successful",
+  "data": { ... }
+}</pre>
+                    </div>
+                </div>
+
+                <div class="endpoint">
+                    <div class="endpoint-header">
+                        <span class="method get">GET</span>
+                        <span class="endpoint-path">/api/health</span>
+                    </div>
+                    <p class="endpoint-desc">Health check endpoint to verify server status</p>
+                    
+                    <span class="label">Response (200):</span>
+                    <div class="code-block">
+                        <pre>{
+  "success": true,
+  "message": "Server is running",
+  "timestamp": "2024-01-01T00:00:00.000Z"
+}</pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Authentication Section -->
+            <div id="auth" class="section">
+                <h2>🔐 Authentication Endpoints</h2>
+                <input type="text" class="search-box" placeholder="Search endpoints..." onkeyup="filterEndpoints(this, 'auth')">
+
+                <!-- Register -->
+                <div class="endpoint" data-search="register signup create account user">
+                    <div class="endpoint-header">
+                        <span class="method post">POST</span>
+                        <span class="endpoint-path">/api/auth/register</span>
+                    </div>
+                    <p class="endpoint-desc">Register a new user account</p>
+                    
+                    <span class="label">Request Body:</span>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Field</th>
+                                <th>Type</th>
+                                <th>Required</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>username</td>
+                                <td>string</td>
+                                <td><span class="badge required">Required</span></td>
+                                <td>Username (3-30 characters)</td>
+                            </tr>
+                            <tr>
+                                <td>email</td>
+                                <td>string</td>
+                                <td><span class="badge required">Required</span></td>
+                                <td>Valid email address</td>
+                            </tr>
+                            <tr>
+                                <td>password</td>
+                                <td>string</td>
+                                <td><span class="badge required">Required</span></td>
+                                <td>Password (min 6 characters)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <span class="label">Example Request:</span>
+                    <div class="code-block">
+                        <pre>{
+  "username": "johndoe",
+  "email": "john@example.com",
+  "password": "securepass123"
+}</pre>
+                    </div>
+
+                    <span class="label">Response <span class="status-code status-201">201 Created</span>:</span>
+                    <div class="code-block">
+                        <pre>{
+  "success": true,
+  "message": "User registered successfully",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": "507f1f77bcf86cd799439011",
+    "username": "johndoe",
+    "email": "john@example.com",
+    "createdAt": "2024-01-01T00:00:00.000Z"
+  }
+}</pre>
+                    </div>
+                </div>
+
+                <!-- Login -->
+                <div class="endpoint" data-search="login signin authenticate">
+                    <div class="endpoint-header">
+                        <span class="method post">POST</span>
+                        <span class="endpoint-path">/api/auth/login</span>
+                    </div>
+                    <p class="endpoint-desc">Login with existing credentials</p>
+                    
+                    <span class="label">Request Body:</span>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Field</th>
+                                <th>Type</th>
+                                <th>Required</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>email</td>
+                                <td>string</td>
+                                <td><span class="badge required">Required</span></td>
+                                <td>User email address</td>
+                            </tr>
+                            <tr>
+                                <td>password</td>
+                                <td>string</td>
+                                <td><span class="badge required">Required</span></td>
+                                <td>User password</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <span class="label">Example Request:</span>
+                    <div class="code-block">
+                        <pre>{
+  "email": "john@example.com",
+  "password": "securepass123"
+}</pre>
+                    </div>
+
+                    <span class="label">Response <span class="status-code status-200">200 OK</span>:</span>
+                    <div class="code-block">
+                        <pre>{
+  "success": true,
+  "message": "Login successful",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": "507f1f77bcf86cd799439011",
+    "username": "johndoe",
+    "email": "john@example.com",
+    "createdAt": "2024-01-01T00:00:00.000Z"
+  }
+}</pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Categories Section -->
+            <div id="categories" class="section">
+                <h2>📁 Categories Endpoints</h2>
+                <input type="text" class="search-box" placeholder="Search endpoints..." onkeyup="filterEndpoints(this, 'categories')">
+
+                <!-- Create Category -->
+                <div class="endpoint" data-search="create category add new">
+                    <div class="endpoint-header">
+                        <span class="method post">POST</span>
+                        <span class="endpoint-path">/api/categories</span>
+                    </div>
+                    <p class="endpoint-desc">Create a new category with a unique name</p>
+                    
+                    <span class="label">Request Body:</span>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Field</th>
+                                <th>Type</th>
+                                <th>Required</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>name</td>
+                                <td>string</td>
+                                <td><span class="badge required">Required</span></td>
+                                <td>Category name (unique, max 100 chars)</td>
+                            </tr>
+                            <tr>
+                                <td>description</td>
+                                <td>string</td>
+                                <td><span class="badge optional">Optional</span></td>
+                                <td>Category description (max 500 chars)</td>
+                            </tr>
+                            <tr>
+                                <td>status</td>
+                                <td>string</td>
+                                <td><span class="badge optional">Optional</span></td>
+                                <td>"Active" or "Inactive" (default: "Active")</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <span class="label">Example Request:</span>
+                    <div class="code-block">
+                        <pre>{
+  "name": "Electronics",
+  "description": "Electronic devices and accessories",
+  "status": "Active"
+}</pre>
+                    </div>
+
+                    <span class="label">Response <span class="status-code status-201">201 Created</span>:</span>
+                    <div class="code-block">
+                        <pre>{
+  "success": true,
+  "message": "Category created successfully",
+  "data": {
+    "_id": "507f1f77bcf86cd799439011",
+    "name": "Electronics",
+    "description": "Electronic devices and accessories",
+    "status": "Active",
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z"
+  }
+}</pre>
+                    </div>
+
+                    <span class="label">Error Response <span class="status-code status-400">400 Bad Request</span>:</span>
+                    <div class="code-block">
+                        <pre>{
+  "success": false,
+  "message": "Category with this name already exists"
+}</pre>
+                    </div>
+                </div>
+
+                <!-- Get All Categories -->
+                <div class="endpoint" data-search="get all categories list fetch filter search">
+                    <div class="endpoint-header">
+                        <span class="method get">GET</span>
+                        <span class="endpoint-path">/api/categories</span>
+                    </div>
+                    <p class="endpoint-desc">Get all categories with optional filtering, searching, and pagination</p>
+                    
+                    <span class="label">Query Parameters:</span>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Parameter</th>
+                                <th>Type</th>
+                                <th>Required</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>status</td>
+                                <td>string</td>
+                                <td><span class="badge optional">Optional</span></td>
+                                <td>Filter by status (Active/Inactive)</td>
+                            </tr>
+                            <tr>
+                                <td>search</td>
+                                <td>string</td>
+                                <td><span class="badge optional">Optional</span></td>
+                                <td>Search in name or description</td>
+                            </tr>
+                            <tr>
+                                <td>page</td>
+                                <td>number</td>
+                                <td><span class="badge optional">Optional</span></td>
+                                <td>Page number (default: 1)</td>
+                            </tr>
+                            <tr>
+                                <td>limit</td>
+                                <td>number</td>
+                                <td><span class="badge optional">Optional</span></td>
+                                <td>Items per page (default: 10)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <span class="label">Example Request:</span>
+                    <div class="code-block">
+                        <pre>GET /api/categories?status=Active&search=tech&page=1&limit=10</pre>
+                    </div>
+
+                    <span class="label">Response <span class="status-code status-200">200 OK</span>:</span>
+                    <div class="code-block">
+                        <pre>{
+  "success": true,
+  "data": [
+    {
+      "_id": "507f1f77bcf86cd799439011",
+      "name": "Electronics",
+      "description": "Electronic devices and accessories",
+      "status": "Active",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    },
+    {
+      "_id": "507f1f77bcf86cd799439012",
+      "name": "Furniture",
+      "description": "Home and office furniture",
+      "status": "Active",
+      "createdAt": "2024-01-02T00:00:00.000Z",
+      "updatedAt": "2024-01-02T00:00:00.000Z"
+    }
+  ],
+  "pagination": {
+    "total": 25,
+    "page": 1,
+    "limit": 10,
+    "pages": 3
+  }
+}</pre>
+                    </div>
+                </div>
+
+                <!-- Get Category by ID -->
+                <div class="endpoint" data-search="get category by id single one">
+                    <div class="endpoint-header">
+                        <span class="method get">GET</span>
+                        <span class="endpoint-path">/api/categories/:id</span>
+                    </div>
+                    <p class="endpoint-desc">Get a single category by ID</p>
+                    
+                    <span class="label">URL Parameters:</span>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Parameter</th>
+                                <th>Type</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>id</td>
+                                <td>string</td>
+                                <td>MongoDB ObjectId of the category</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <span class="label">Response <span class="status-code status-200">200 OK</span>:</span>
+                    <div class="code-block">
+                        <pre>{
+  "success": true,
+  "data": {
+    "_id": "507f1f77bcf86cd799439011",
+    "name": "Electronics",
+    "description": "Electronic devices and accessories",
+    "status": "Active",
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z"
+  }
+}</pre>
+                    </div>
+
+                    <span class="label">Error Response <span class="status-code status-404">404 Not Found</span>:</span>
+                    <div class="code-block">
+                        <pre>{
+  "success": false,
+  "message": "Category not found"
+}</pre>
+                    </div>
+                </div>
+
+                <!-- Update Category -->
+                <div class="endpoint" data-search="update category edit modify">
+                    <div class="endpoint-header">
+                        <span class="method put">PUT</span>
+                        <span class="endpoint-path">/api/categories/:id</span>
+                    </div>
+                    <p class="endpoint-desc">Update a category by ID</p>
+                    
+                    <span class="label">URL Parameters:</span>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Parameter</th>
+                                <th>Type</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>id</td>
+                                <td>string</td>
+                                <td>MongoDB ObjectId of the category</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <span class="label">Request Body (all fields optional, at least one required):</span>
+                    <div class="code-block">
+                        <pre>{
+  "name": "Consumer Electronics",
+  "description": "Updated description",
+  "status": "Inactive"
+}</pre>
+                    </div>
+
+                    <span class="label">Response <span class="status-code status-200">200 OK</span>:</span>
+                    <div class="code-block">
+                        <pre>{
+  "success": true,
+  "message": "Category updated successfully",
+  "data": {
+    "_id": "507f1f77bcf86cd799439011",
+    "name": "Consumer Electronics",
+    "description": "Updated description",
+    "status": "Inactive",
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T12:00:00.000Z"
+  }
+}</pre>
+                    </div>
+
+                    <span class="label">Error Response <span class="status-code status-400">400 Bad Request</span>:</span>
+                    <div class="code-block">
+                        <pre>{
+  "success": false,
+  "message": "Category with this name already exists"
+}</pre>
+                    </div>
+                </div>
+
+                <!-- Delete Category -->
+                <div class="endpoint" data-search="delete category remove">
+                    <div class="endpoint-header">
+                        <span class="method delete">DELETE</span>
+                        <span class="endpoint-path">/api/categories/:id</span>
+                    </div>
+                    <p class="endpoint-desc">Delete a category by ID</p>
+                    
+                    <span class="label">URL Parameters:</span>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Parameter</th>
+                                <th>Type</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>id</td>
+                                <td>string</td>
+                                <td>MongoDB ObjectId of the category</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <span class="label">Response <span class="status-code status-200">200 OK</span>:</span>
+                    <div class="code-block">
+                        <pre>{
+  "success": true,
+  "message": "Category deleted successfully",
+  "data": {
+    "_id": "507f1f77bcf86cd799439011",
+    "name": "Electronics",
+    "description": "Electronic devices and accessories",
+    "status": "Active",
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z"
+  }
+}</pre>
+                    </div>
+
+                    <span class="label">Error Response <span class="status-code status-404">404 Not Found</span>:</span>
+                    <div class="code-block">
+                        <pre>{
+  "success": false,
+  "message": "Category not found"
+}</pre>
+                    </div>
+                </div>
+
+                <!-- Bulk Delete Categories -->
+                <div class="endpoint" data-search="bulk delete categories multiple remove">
+                    <div class="endpoint-header">
+                        <span class="method post">POST</span>
+                        <span class="endpoint-path">/api/categories/bulk-delete</span>
+                    </div>
+                    <p class="endpoint-desc">Delete multiple categories in a single operation</p>
+                    
+                    <span class="label">Request Body:</span>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Field</th>
+                                <th>Type</th>
+                                <th>Required</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>ids</td>
+                                <td>array</td>
+                                <td><span class="badge required">Required</span></td>
+                                <td>Array of MongoDB ObjectIds (min 1 item)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <span class="label">Example Request:</span>
+                    <div class="code-block">
+                        <pre>{
+  "ids": [
+    "507f1f77bcf86cd799439011",
+    "507f1f77bcf86cd799439012",
+    "507f1f77bcf86cd799439013"
+  ]
+}</pre>
+                    </div>
+
+                    <span class="label">Response <span class="status-code status-200">200 OK</span>:</span>
+                    <div class="code-block">
+                        <pre>{
+  "success": true,
+  "message": "3 categories deleted successfully",
+  "data": {
+    "deletedCount": 3
+  }
+}</pre>
+                    </div>
+
+                    <span class="label">Error Response <span class="status-code status-400">400 Bad Request</span>:</span>
+                    <div class="code-block">
+                        <pre>{
+  "success": false,
+  "message": "\"ids\" must contain at least 1 items"
+}</pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Products Section -->
+            <div id="products" class="section"></div>
+                <h2>📦 Products Endpoints</h2>
+                <input type="text" class="search-box" placeholder="Search endpoints..." onkeyup="filterEndpoints(this, 'products')">
+
+                <!-- Create Product -->
+                <div class="endpoint" data-search="create product add new">
+                    <div class="endpoint-header">
+                        <span class="method post">POST</span>
+                        <span class="endpoint-path">/api/products</span>
+                    </div>
+                    <p class="endpoint-desc">Create a new product</p>
+                    
+                    <span class="label">Request Body:</span>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Field</th>
+                                <th>Type</th>
+                                <th>Required</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>sku</td>
+                                <td>string</td>
+                                <td><span class="badge required">Required</span></td>
+                                <td>Unique product SKU (auto-uppercase)</td>
+                            </tr>
+                            <tr>
+                                <td>name</td>
+                                <td>string</td>
+                                <td><span class="badge required">Required</span></td>
+                                <td>Product name (max 200 chars)</td>
+                            </tr>
+                            <tr>
+                                <td>categoryId</td>
+                                <td>string</td>
+                                <td><span class="badge required">Required</span></td>
+                                <td>MongoDB ObjectId of category</td>
+                            </tr>
+                            <tr>
+                                <td>description</td>
+                                <td>string</td>
+                                <td><span class="badge optional">Optional</span></td>
+                                <td>Product description (max 1000 chars)</td>
+                            </tr>
+                            <tr>
+                                <td>costPrice</td>
+                                <td>number</td>
+                                <td><span class="badge required">Required</span></td>
+                                <td>Cost price (must be >= 0)</td>
+                            </tr>
+                            <tr>
+                                <td>sellingPrice</td>
+                                <td>number</td>
+                                <td><span class="badge required">Required</span></td>
+                                <td>Selling price (must be >= 0)</td>
+                            </tr>
+                            <tr>
+                                <td>supplierId</td>
+                                <td>string</td>
+                                <td><span class="badge required">Required</span></td>
+                                <td>MongoDB ObjectId of supplier</td>
+                            </tr>
+                            <tr>
+                                <td>status</td>
+                                <td>string</td>
+                                <td><span class="badge optional">Optional</span></td>
+                                <td>"Active" or "Inactive" (default: "Active")</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <span class="label">Example Request:</span>
+                    <div class="code-block">
+                        <pre>{
+  "sku": "PROD-001",
+  "name": "Wireless Mouse",
+  "categoryId": "507f1f77bcf86cd799439011",
+  "description": "Ergonomic wireless mouse",
+  "costPrice": 15.50,
+  "sellingPrice": 29.99,
+  "supplierId": "507f1f77bcf86cd799439012",
+  "status": "Active"
+}</pre>
+                    </div>
+
+                    <span class="label">Response <span class="status-code status-201">201 Created</span>:</span>
+                    <div class="code-block">
+                        <pre>{
+  "success": true,
+  "message": "Product created successfully",
+  "data": {
+    "_id": "507f1f77bcf86cd799439013",
+    "sku": "PROD-001",
+    "name": "Wireless Mouse",
+    "categoryId": "507f1f77bcf86cd799439011",
+    "description": "Ergonomic wireless mouse",
+    "costPrice": 15.50,
+    "sellingPrice": 29.99,
+    "supplierId": "507f1f77bcf86cd799439012",
+    "status": "Active",
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z"
+  }
+}</pre>
+                    </div>
+                </div>
+
+                <!-- Get All Products -->
+                <div class="endpoint" data-search="get all products list fetch">
+                    <div class="endpoint-header">
+                        <span class="method get">GET</span>
+                        <span class="endpoint-path">/api/products</span>
+                    </div>
+                    <p class="endpoint-desc">Get all products with optional filtering and pagination</p>
+                    
+                    <span class="label">Query Parameters:</span>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Parameter</th>
+                                <th>Type</th>
+                                <th>Required</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>status</td>
+                                <td>string</td>
+                                <td><span class="badge optional">Optional</span></td>
+                                <td>Filter by status (Active/Inactive)</td>
+                            </tr>
+                            <tr>
+                                <td>categoryId</td>
+                                <td>string</td>
+                                <td><span class="badge optional">Optional</span></td>
+                                <td>Filter by category ID</td>
+                            </tr>
+                            <tr>
+                                <td>supplierId</td>
+                                <td>string</td>
+                                <td><span class="badge optional">Optional</span></td>
+                                <td>Filter by supplier ID</td>
+                            </tr>
+                            <tr>
+                                <td>page</td>
+                                <td>number</td>
+                                <td><span class="badge optional">Optional</span></td>
+                                <td>Page number (default: 1)</td>
+                            </tr>
+                            <tr>
+                                <td>limit</td>
+                                <td>number</td>
+                                <td><span class="badge optional">Optional</span></td>
+                                <td>Items per page (default: 10)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <span class="label">Example Request:</span>
+                    <div class="code-block">
+                        <pre>GET /api/products?status=Active&page=1&limit=10</pre>
+                    </div>
+
+                    <span class="label">Response <span class="status-code status-200">200 OK</span>:</span>
+                    <div class="code-block">
+                        <pre>{
+  "success": true,
+  "data": [
+    {
+      "_id": "507f1f77bcf86cd799439013",
+      "sku": "PROD-001",
+      "name": "Wireless Mouse",
+      "categoryId": {
+        "_id": "507f1f77bcf86cd799439011",
+        "name": "Electronics"
+      },
+      "description": "Ergonomic wireless mouse",
+      "costPrice": 15.50,
+      "sellingPrice": 29.99,
+      "supplierId": {
+        "_id": "507f1f77bcf86cd799439012",
+        "name": "Tech Supplies Inc"
+      },
+      "status": "Active",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    }
+  ],
+  "pagination": {
+    "total": 50,
+    "page": 1,
+    "limit": 10,
+    "pages": 5
+  }
+}</pre>
+                    </div>
+                </div>
+
+                <!-- Get Product by ID -->
+                <div class="endpoint" data-search="get product by id single one">
+                    <div class="endpoint-header">
+                        <span class="method get">GET</span>
+                        <span class="endpoint-path">/api/products/:id</span>
+                    </div>
+                    <p class="endpoint-desc">Get a single product by ID</p>
+                    
+                    <span class="label">URL Parameters:</span>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Parameter</th>
+                                <th>Type</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>id</td>
+                                <td>string</td>
+                                <td>MongoDB ObjectId of the product</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <span class="label">Response <span class="status-code status-200">200 OK</span>:</span>
+                    <div class="code-block">
+                        <pre>{
+  "success": true,
+  "data": {
+    "_id": "507f1f77bcf86cd799439013",
+    "sku": "PROD-001",
+    "name": "Wireless Mouse",
+    "categoryId": {
+      "_id": "507f1f77bcf86cd799439011",
+      "name": "Electronics"
+    },
+    "description": "Ergonomic wireless mouse",
+    "costPrice": 15.50,
+    "sellingPrice": 29.99,
+    "supplierId": {
+      "_id": "507f1f77bcf86cd799439012",
+      "name": "Tech Supplies Inc"
+    },
+    "status": "Active",
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z"
+  }
+}</pre>
+                    </div>
+                </div>
+
+                <!-- Update Product -->
+                <div class="endpoint" data-search="update product edit modify">
+                    <div class="endpoint-header">
+                        <span class="method put">PUT</span>
+                        <span class="endpoint-path">/api/products/:id</span>
+                    </div>
+                    <p class="endpoint-desc">Update a product by ID</p>
+                    
+                    <span class="label">URL Parameters:</span>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Parameter</th>
+                                <th>Type</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>id</td>
+                                <td>string</td>
+                                <td>MongoDB ObjectId of the product</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <span class="label">Request Body (all fields optional, at least one required):</span>
+                    <div class="code-block">
+                        <pre>{
+  "name": "Updated Wireless Mouse",
+  "sellingPrice": 34.99,
+  "status": "Inactive"
+}</pre>
+                    </div>
+
+                    <span class="label">Response <span class="status-code status-200">200 OK</span>:</span>
+                    <div class="code-block">
+                        <pre>{
+  "success": true,
+  "message": "Product updated successfully",
+  "data": {
+    "_id": "507f1f77bcf86cd799439013",
+    "sku": "PROD-001",
+    "name": "Updated Wireless Mouse",
+    "categoryId": "507f1f77bcf86cd799439011",
+    "description": "Ergonomic wireless mouse",
+    "costPrice": 15.50,
+    "sellingPrice": 34.99,
+    "supplierId": "507f1f77bcf86cd799439012",
+    "status": "Inactive",
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T12:00:00.000Z"
+  }
+}</pre>
+                    </div>
+                </div>
+
+                <!-- Delete Product -->
+                <div class="endpoint" data-search="delete product remove">
+                    <div class="endpoint-header">
+                        <span class="method delete">DELETE</span>
+                        <span class="endpoint-path">/api/products/:id</span>
+                    </div>
+                    <p class="endpoint-desc">Delete a product by ID</p>
+                    
+                    <span class="label">URL Parameters:</span>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Parameter</th>
+                                <th>Type</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>id</td>
+                                <td>string</td>
+                                <td>MongoDB ObjectId of the product</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <span class="label">Response <span class="status-code status-200">200 OK</span>:</span>
+                    <div class="code-block">
+                        <pre>{
+  "success": true,
+  "message": "Product deleted successfully",
+  "data": {
+    "_id": "507f1f77bcf86cd799439013",
+    "sku": "PROD-001",
+    "name": "Wireless Mouse",
+    "categoryId": "507f1f77bcf86cd799439011",
+    "description": "Ergonomic wireless mouse",
+    "costPrice": 15.50,
+    "sellingPrice": 29.99,
+    "supplierId": "507f1f77bcf86cd799439012",
+    "status": "Active",
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z"
+  }
+}</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>📝 API Documentation | Last Updated: <span id="lastUpdated"></span></p>
+            <p style="margin-top: 10px; font-size: 0.9rem;">
+                💡 <strong>Note:</strong> When adding new endpoints, update this documentation in <code>public/index.html</code>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Set last updated date
+        document.getElementById('lastUpdated').textContent = new Date().toLocaleDateString();
+
+        // Section navigation
+        function showSection(sectionId) {
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // Remove active class from all buttons
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Show selected section
+            document.getElementById(sectionId).classList.add('active');
+            
+            // Add active class to clicked button
+            event.target.classList.add('active');
+        }
+
+        // Search/filter functionality
+        function filterEndpoints(input, sectionId) {
+            const filter = input.value.toLowerCase();
+            const section = document.getElementById(sectionId);
+            const endpoints = section.querySelectorAll('.endpoint');
+            
+            endpoints.forEach(endpoint => {
+                const searchText = endpoint.getAttribute('data-search') || '';
+                const text = endpoint.textContent.toLowerCase() + ' ' + searchText.toLowerCase();
+                
+                if (text.includes(filter)) {
+                    endpoint.style.display = 'block';
+                } else {
+                    endpoint.style.display = 'none';
+                }
+            });
+        }
+    </script>
+</body>
+</html>

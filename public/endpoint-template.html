@@ -1,0 +1,138 @@
+<!-- 
+    ENDPOINT DOCUMENTATION TEMPLATE
+    Copy this template when adding new endpoints to public/index.html
+    Replace all [PLACEHOLDERS] with actual values
+-->
+
+<!-- [ENDPOINT_NAME] -->
+<div class="endpoint" data-search="[add search keywords here]">
+    <div class="endpoint-header">
+        <span class="method [get|post|put|delete]">[METHOD]</span>
+        <span class="endpoint-path">/api/[your/endpoint/path]</span>
+    </div>
+    <p class="endpoint-desc">[Brief description of what this endpoint does]</p>
+    
+    <!-- OPTIONAL: For endpoints with request body -->
+    <span class="label">Request Body:</span>
+    <table class="param-table">
+        <thead>
+            <tr>
+                <th>Field</th>
+                <th>Type</th>
+                <th>Required</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>[fieldName]</td>
+                <td>[string|number|boolean|object|array]</td>
+                <td><span class="badge [required|optional]">[Required|Optional]</span></td>
+                <td>[Field description and constraints]</td>
+            </tr>
+            <!-- Add more rows as needed -->
+        </tbody>
+    </table>
+
+    <!-- OPTIONAL: For endpoints with query parameters -->
+    <span class="label">Query Parameters:</span>
+    <table class="param-table">
+        <thead>
+            <tr>
+                <th>Parameter</th>
+                <th>Type</th>
+                <th>Required</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>[paramName]</td>
+                <td>[string|number|boolean]</td>
+                <td><span class="badge [required|optional]">[Required|Optional]</span></td>
+                <td>[Parameter description]</td>
+            </tr>
+            <!-- Add more rows as needed -->
+        </tbody>
+    </table>
+
+    <!-- OPTIONAL: For endpoints with URL parameters -->
+    <span class="label">URL Parameters:</span>
+    <table class="param-table">
+        <thead>
+            <tr>
+                <th>Parameter</th>
+                <th>Type</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>[paramName]</td>
+                <td>[string|number]</td>
+                <td>[Parameter description]</td>
+            </tr>
+            <!-- Add more rows as needed -->
+        </tbody>
+    </table>
+
+    <span class="label">Example Request:</span>
+    <div class="code-block">
+        <pre>[Show example request - can be JSON body, query string, or both]
+{
+  "field1": "value1",
+  "field2": "value2"
+}
+
+OR
+
+GET /api/endpoint?param1=value1&param2=value2</pre>
+    </div>
+
+    <span class="label">Response <span class="status-code status-[200|201|400|404|500]">[200 OK|201 Created|etc]</span>:</span>
+    <div class="code-block">
+        <pre>{
+  "success": true,
+  "message": "[Success message]",
+  "data": {
+    [Your response data structure]
+  }
+}</pre>
+    </div>
+
+    <!-- OPTIONAL: Add error responses -->
+    <span class="label">Error Response <span class="status-code status-400">400 Bad Request</span>:</span>
+    <div class="code-block">
+        <pre>{
+  "success": false,
+  "message": "[Error message]",
+  "errors": [
+    {
+      "field": "[fieldName]",
+      "message": "[Error description]"
+    }
+  ]
+}</pre>
+    </div>
+</div>
+
+<!-- 
+    QUICK REFERENCE:
+    
+    Method Classes:
+    - method get (green)
+    - method post (blue)
+    - method put (yellow)
+    - method delete (red)
+    
+    Badge Classes:
+    - badge required (red)
+    - badge optional (gray)
+    
+    Status Code Classes:
+    - status-200 (success - green)
+    - status-201 (created - blue)
+    - status-400 (bad request - red)
+    - status-404 (not found - red)
+    - status-500 (server error - red)
+-->

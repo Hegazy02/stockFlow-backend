@@ -1,0 +1,50 @@
+{
+  "baseUrl": "http://localhost:3000/api",
+  "endpoints": [
+    {
+      "name": "Health Check",
+      "path": "/api/health",
+      "method": "GET"
+    },
+    {
+      "name": "Register User",
+      "path": "/api/auth/register",
+      "method": "POST"
+    },
+    {
+      "name": "Login User",
+      "path": "/api/auth/login",
+      "method": "POST"
+    },
+    {
+      "name": "Create Product",
+      "path": "/api/products",
+      "method": "POST"
+    },
+    {
+      "name": "Get All Products",
+      "path": "/api/products",
+      "method": "GET"
+    },
+    {
+      "name": "Get Product By ID",
+      "path": "/api/products/:id",
+      "method": "GET"
+    },
+    {
+      "name": "Update Product",
+      "path": "/api/products/:id",
+      "method": "PUT"
+    },
+    {
+      "name": "Delete Product",
+      "path": "/api/products/:id",
+      "method": "DELETE"
+    },
+    {
+      "name": "Bulk Delete Products",
+      "path": "/api/products/bulk-delete",
+      "method": "POST"
+    }
+  ]
+}

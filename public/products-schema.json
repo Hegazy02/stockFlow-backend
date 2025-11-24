@@ -1,0 +1,65 @@
+{
+  "baseUrl": "http://localhost:3000/api",
+  "endpoints": [
+    {
+      "name": "Create Product",
+      "path": "/api/products",
+      "method": "POST"
+    },
+    {
+      "name": "Get All Products",
+      "path": "/api/products",
+      "method": "GET"
+    },
+    {
+      "name": "Get Product By ID",
+      "path": "/api/products/:id",
+      "method": "GET"
+    },
+    {
+      "name": "Update Product",
+      "path": "/api/products/:id",
+      "method": "PUT"
+    },
+    {
+      "name": "Delete Product",
+      "path": "/api/products/:id",
+      "method": "DELETE"
+    },
+    {
+      "name": "Bulk Delete Products",
+      "path": "/api/products/bulk-delete",
+      "method": "POST"
+    },
+    {
+      "name": "Create Category",
+      "path": "/api/categories",
+      "method": "POST"
+    },
+    {
+      "name": "Get All Categories",
+      "path": "/api/categories",
+      "method": "GET"
+    },
+    {
+      "name": "Get Category By ID",
+      "path": "/api/categories/:id",
+      "method": "GET"
+    },
+    {
+      "name": "Update Category",
+      "path": "/api/categories/:id",
+      "method": "PUT"
+    },
+    {
+      "name": "Delete Category",
+      "path": "/api/categories/:id",
+      "method": "DELETE"
+    },
+    {
+      "name": "Bulk Delete Categories",
+      "path": "/api/categories/bulk-delete",
+      "method": "POST"
+    }
+  ]
+}
