@@ -24,45 +24,30 @@ const productSchema = new mongoose.Schema({
     trim: true,
     maxlength: [1000, "Description must not exceed 1000 characters"],
   },
-  costPrice: {
-    type: Number,
-    required: [true, "Cost price is required"],
-    min: [0, "Cost price must be a positive number"],
-  },
-  sellingPrice: {
-    type: Number,
-    required: [true, "Selling price is required"],
-    min: [0, "Selling price must be a positive number"],
-  },
-  supplierId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Supplier",
-    required: [true, "Supplier ID is required"],
-  },
-  status: {
-    type: String,
-    enum: ["Active", "Inactive"],
-    default: "Active",
-  },
+  // costPrice: {
+  //   type: Number,
+  //   required: [true, "Cost price is required"],
+  //   min: [0, "Cost price must be a positive number"],
+  // },
+  // sellingPrice: {
+  //   type: Number,
+  //   required: [true, "Selling price is required"],
+  //   min: [0, "Selling price must be a positive number"],
+  // },
+  // supplierId: {
+  //   type: mongoose.Schema.Types.ObjectId,
+  //   ref: "Supplier",
+  //   required: [true, "Supplier ID is required"],
+  // },
+  // status: {
+  //   type: String,
+  //   enum: ["Active", "Inactive"],
+  //   default: "Active",
+  // },
+}, {
+  timestamps: true // Automatically adds createdAt and updatedAt
 });
 
-// Update the updatedAt timestamp before saving
-productSchema.pre("save", function (next) {
-  this.updatedAt = Date.now();
-  next();
-});
-
-// Update the updatedAt timestamp before updating
-productSchema.pre("findOneAndUpdate", function (next) {
-  this.set({ updatedAt: Date.now() });
-  next();
-});
-
-// Update the updatedAt timestamp before updating
-productSchema.pre("updateOne", function (next) {
-  this.set({ updatedAt: Date.now() });
-  next();
-});
 // populate category
 productSchema.virtual("category", {
   ref: "Category", // the model to populate

@@ -107,7 +107,7 @@ const getProductById = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const product = await Product.findById(id).populate("categoryId", "name");
+    const product = await Product.findById(id).populate("category", "name"); // populate the virtual
     if (!product) {
       return res.status(404).json({
         success: false,
