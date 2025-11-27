@@ -238,6 +238,7 @@
             <button class="nav-btn" onclick="showSection('auth')">Authentication</button>
             <button class="nav-btn" onclick="showSection('categories')">Categories</button>
             <button class="nav-btn" onclick="showSection('products')">Products</button>
+            <button class="nav-btn" onclick="showSection('warehouses')">Warehouses</button>
         </div>
 
         <div class="content">
@@ -796,7 +797,7 @@
             </div>
 
             <!-- Products Section -->
-            <div id="products" class="section"></div>
+            <div id="products" class="section">
                 <h2>📦 Products Endpoints</h2>
                 <input type="text" class="search-box" placeholder="Search endpoints..." onkeyup="filterEndpoints(this, 'products')">
 
@@ -1152,6 +1153,411 @@
     "createdAt": "2024-01-01T00:00:00.000Z",
     "updatedAt": "2024-01-01T00:00:00.000Z"
   }
+}</pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Warehouses Section -->
+            <div id="warehouses" class="section">
+                <h2>🏭 Warehouses Endpoints</h2>
+                <input type="text" class="search-box" placeholder="Search endpoints..." onkeyup="filterEndpoints(this, 'warehouses')">
+
+                <!-- Create Warehouse -->
+                <div class="endpoint" data-search="create warehouse add new">
+                    <div class="endpoint-header">
+                        <span class="method post">POST</span>
+                        <span class="endpoint-path">/api/warehouses</span>
+                    </div>
+                    <p class="endpoint-desc">Create a new warehouse with a unique title</p>
+                    
+                    <span class="label">Request Body:</span>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Field</th>
+                                <th>Type</th>
+                                <th>Required</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>title</td>
+                                <td>string</td>
+                                <td><span class="badge required">Required</span></td>
+                                <td>Warehouse title (unique, max 100 chars)</td>
+                            </tr>
+                            <tr>
+                                <td>location</td>
+                                <td>string</td>
+                                <td><span class="badge required">Required</span></td>
+                                <td>Warehouse location (max 200 chars)</td>
+                            </tr>
+                            <tr>
+                                <td>managerId</td>
+                                <td>string</td>
+                                <td><span class="badge required">Required</span></td>
+                                <td>MongoDB ObjectId of the manager</td>
+                            </tr>
+                            <tr>
+                                <td>status</td>
+                                <td>string</td>
+                                <td><span class="badge optional">Optional</span></td>
+                                <td>"Active" or "Inactive" (default: "Active")</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <span class="label">Example Request:</span>
+                    <div class="code-block">
+                        <pre>{
+  "title": "Main Warehouse",
+  "location": "123 Industrial Ave, New York, NY 10001",
+  "managerId": "507f1f77bcf86cd799439011",
+  "status": "Active"
+}</pre>
+                    </div>
+
+                    <span class="label">Response <span class="status-code status-201">201 Created</span>:</span>
+                    <div class="code-block">
+                        <pre>{
+  "success": true,
+  "message": "Warehouse created successfully",
+  "data": {
+    "_id": "507f1f77bcf86cd799439014",
+    "title": "Main Warehouse",
+    "location": "123 Industrial Ave, New York, NY 10001",
+    "managerId": "507f1f77bcf86cd799439011",
+    "status": "Active",
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z"
+  }
+}</pre>
+                    </div>
+
+                    <span class="label">Error Response <span class="status-code status-400">400 Bad Request</span>:</span>
+                    <div class="code-block">
+                        <pre>{
+  "success": false,
+  "message": "Warehouse with this title already exists"
+}</pre>
+                    </div>
+                </div>
+
+                <!-- Get All Warehouses -->
+                <div class="endpoint" data-search="get all warehouses list fetch filter search">
+                    <div class="endpoint-header">
+                        <span class="method get">GET</span>
+                        <span class="endpoint-path">/api/warehouses</span>
+                    </div>
+                    <p class="endpoint-desc">Get all warehouses with optional filtering, searching, and pagination</p>
+                    
+                    <span class="label">Query Parameters:</span>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Parameter</th>
+                                <th>Type</th>
+                                <th>Required</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>status</td>
+                                <td>string</td>
+                                <td><span class="badge optional">Optional</span></td>
+                                <td>Filter by status (Active/Inactive)</td>
+                            </tr>
+                            <tr>
+                                <td>managerId</td>
+                                <td>string</td>
+                                <td><span class="badge optional">Optional</span></td>
+                                <td>Filter by manager ID</td>
+                            </tr>
+                            <tr>
+                                <td>search</td>
+                                <td>string</td>
+                                <td><span class="badge optional">Optional</span></td>
+                                <td>Search in title or location</td>
+                            </tr>
+                            <tr>
+                                <td>page</td>
+                                <td>number</td>
+                                <td><span class="badge optional">Optional</span></td>
+                                <td>Page number (default: 1)</td>
+                            </tr>
+                            <tr>
+                                <td>limit</td>
+                                <td>number</td>
+                                <td><span class="badge optional">Optional</span></td>
+                                <td>Items per page (default: 10)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <span class="label">Example Request:</span>
+                    <div class="code-block">
+                        <pre>GET /api/warehouses?status=Active&search=main&page=1&limit=10</pre>
+                    </div>
+
+                    <span class="label">Response <span class="status-code status-200">200 OK</span>:</span>
+                    <div class="code-block">
+                        <pre>{
+  "success": true,
+  "data": [
+    {
+      "_id": "507f1f77bcf86cd799439014",
+      "title": "Main Warehouse",
+      "location": "123 Industrial Ave, New York, NY 10001",
+      "managerId": {
+        "_id": "507f1f77bcf86cd799439011",
+        "username": "johndoe",
+        "email": "john@example.com"
+      },
+      "status": "Active",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    }
+  ],
+  "pagination": {
+    "total": 15,
+    "page": 1,
+    "limit": 10,
+    "pages": 2
+  }
+}</pre>
+                    </div>
+                </div>
+
+                <!-- Get Warehouse by ID -->
+                <div class="endpoint" data-search="get warehouse by id single one">
+                    <div class="endpoint-header">
+                        <span class="method get">GET</span>
+                        <span class="endpoint-path">/api/warehouses/:id</span>
+                    </div>
+                    <p class="endpoint-desc">Get a single warehouse by ID</p>
+                    
+                    <span class="label">URL Parameters:</span>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Parameter</th>
+                                <th>Type</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>id</td>
+                                <td>string</td>
+                                <td>MongoDB ObjectId of the warehouse</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <span class="label">Response <span class="status-code status-200">200 OK</span>:</span>
+                    <div class="code-block">
+                        <pre>{
+  "success": true,
+  "data": {
+    "_id": "507f1f77bcf86cd799439014",
+    "title": "Main Warehouse",
+    "location": "123 Industrial Ave, New York, NY 10001",
+    "managerId": {
+      "_id": "507f1f77bcf86cd799439011",
+      "username": "johndoe",
+      "email": "john@example.com"
+    },
+    "status": "Active",
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z"
+  }
+}</pre>
+                    </div>
+
+                    <span class="label">Error Response <span class="status-code status-404">404 Not Found</span>:</span>
+                    <div class="code-block">
+                        <pre>{
+  "success": false,
+  "message": "Warehouse not found"
+}</pre>
+                    </div>
+                </div>
+
+                <!-- Update Warehouse -->
+                <div class="endpoint" data-search="update warehouse edit modify">
+                    <div class="endpoint-header">
+                        <span class="method put">PUT</span>
+                        <span class="endpoint-path">/api/warehouses/:id</span>
+                    </div>
+                    <p class="endpoint-desc">Update a warehouse by ID</p>
+                    
+                    <span class="label">URL Parameters:</span>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Parameter</th>
+                                <th>Type</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>id</td>
+                                <td>string</td>
+                                <td>MongoDB ObjectId of the warehouse</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <span class="label">Request Body (all fields optional, at least one required):</span>
+                    <div class="code-block">
+                        <pre>{
+  "title": "Central Warehouse",
+  "location": "456 Storage Blvd, Brooklyn, NY 11201",
+  "status": "Inactive"
+}</pre>
+                    </div>
+
+                    <span class="label">Response <span class="status-code status-200">200 OK</span>:</span>
+                    <div class="code-block">
+                        <pre>{
+  "success": true,
+  "message": "Warehouse updated successfully",
+  "data": {
+    "_id": "507f1f77bcf86cd799439014",
+    "title": "Central Warehouse",
+    "location": "456 Storage Blvd, Brooklyn, NY 11201",
+    "managerId": {
+      "_id": "507f1f77bcf86cd799439011",
+      "username": "johndoe",
+      "email": "john@example.com"
+    },
+    "status": "Inactive",
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T12:00:00.000Z"
+  }
+}</pre>
+                    </div>
+
+                    <span class="label">Error Response <span class="status-code status-400">400 Bad Request</span>:</span>
+                    <div class="code-block">
+                        <pre>{
+  "success": false,
+  "message": "Warehouse with this title already exists"
+}</pre>
+                    </div>
+                </div>
+
+                <!-- Delete Warehouse -->
+                <div class="endpoint" data-search="delete warehouse remove">
+                    <div class="endpoint-header">
+                        <span class="method delete">DELETE</span>
+                        <span class="endpoint-path">/api/warehouses/:id</span>
+                    </div>
+                    <p class="endpoint-desc">Delete a warehouse by ID</p>
+                    
+                    <span class="label">URL Parameters:</span>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Parameter</th>
+                                <th>Type</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>id</td>
+                                <td>string</td>
+                                <td>MongoDB ObjectId of the warehouse</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <span class="label">Response <span class="status-code status-200">200 OK</span>:</span>
+                    <div class="code-block">
+                        <pre>{
+  "success": true,
+  "message": "Warehouse deleted successfully",
+  "data": {
+    "_id": "507f1f77bcf86cd799439014",
+    "title": "Main Warehouse",
+    "location": "123 Industrial Ave, New York, NY 10001",
+    "managerId": "507f1f77bcf86cd799439011",
+    "status": "Active",
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z"
+  }
+}</pre>
+                    </div>
+
+                    <span class="label">Error Response <span class="status-code status-404">404 Not Found</span>:</span>
+                    <div class="code-block">
+                        <pre>{
+  "success": false,
+  "message": "Warehouse not found"
+}</pre>
+                    </div>
+                </div>
+
+                <!-- Bulk Delete Warehouses -->
+                <div class="endpoint" data-search="bulk delete warehouses multiple remove">
+                    <div class="endpoint-header">
+                        <span class="method post">POST</span>
+                        <span class="endpoint-path">/api/warehouses/bulk-delete</span>
+                    </div>
+                    <p class="endpoint-desc">Delete multiple warehouses in a single operation</p>
+                    
+                    <span class="label">Request Body:</span>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Field</th>
+                                <th>Type</th>
+                                <th>Required</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>ids</td>
+                                <td>array</td>
+                                <td><span class="badge required">Required</span></td>
+                                <td>Array of MongoDB ObjectIds (min 1 item)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <span class="label">Example Request:</span>
+                    <div class="code-block">
+                        <pre>{
+  "ids": [
+    "507f1f77bcf86cd799439014",
+    "507f1f77bcf86cd799439015",
+    "507f1f77bcf86cd799439016"
+  ]
+}</pre>
+                    </div>
+
+                    <span class="label">Response <span class="status-code status-200">200 OK</span>:</span>
+                    <div class="code-block">
+                        <pre>{
+  "success": true,
+  "message": "3 warehouse(s) deleted successfully",
+  "data": {
+    "deletedCount": 3
+  }
+}</pre>
+                    </div>
+
+                    <span class="label">Error Response <span class="status-code status-400">400 Bad Request</span>:</span>
+                    <div class="code-block">
+                        <pre>{
+  "success": false,
+  "message": "\"ids\" must contain at least 1 items"
 }</pre>
                     </div>
                 </div>

@@ -60,6 +60,36 @@
       "name": "Bulk Delete Categories",
       "path": "/api/categories/bulk-delete",
       "method": "POST"
+    },
+    {
+      "name": "Create Warehouse",
+      "path": "/api/warehouses",
+      "method": "POST"
+    },
+    {
+      "name": "Get All Warehouses",
+      "path": "/api/warehouses",
+      "method": "GET"
+    },
+    {
+      "name": "Get Warehouse By ID",
+      "path": "/api/warehouses/:id",
+      "method": "GET"
+    },
+    {
+      "name": "Update Warehouse",
+      "path": "/api/warehouses/:id",
+      "method": "PUT"
+    },
+    {
+      "name": "Delete Warehouse",
+      "path": "/api/warehouses/:id",
+      "method": "DELETE"
+    },
+    {
+      "name": "Bulk Delete Warehouses",
+      "path": "/api/warehouses/bulk-delete",
+      "method": "POST"
     }
   ]
 }
