@@ -1,4 +1,5 @@
 const Product = require("../models/Product");
+const mongoose = require("mongoose");
 
 /**
  * Create a new product
@@ -63,14 +64,18 @@ const createProduct = async (req, res, next) => {
  */
 const getAllProducts = async (req, res, next) => {
   try {
-    const { status, categoryId, supplierId, page = 1, limit = 10 } = req.query;
+    const { status, categoryId, name, page = 1, limit = 10 } = req.query;
 
     // Build filter object
     const filter = {};
     if (status) filter.status = status;
-    if (categoryId) filter.categoryId = categoryId;
-    if (supplierId) filter.supplierId = supplierId;
-
+    if (categoryId) {
+      // Convert categoryId string to ObjectId for proper MongoDB comparison
+      filter.categoryId = new mongoose.Types.ObjectId(categoryId);
+    }
+    if (name) {
+      filter.name = { $regex: name, $options: "i" };
+    }
     // Calculate pagination
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
@@ -80,6 +85,8 @@ const getAllProducts = async (req, res, next) => {
       .skip(skip)
       .limit(parseInt(limit))
       .sort({ createdAt: -1 });
+    console.log("categoryId:", categoryId);
+    console.log("prod:", products.length);
 
     // Get total count for pagination
     const total = await Product.countDocuments(filter);
