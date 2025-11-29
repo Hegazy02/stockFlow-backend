@@ -120,6 +120,36 @@
       "name": "Bulk Delete Partners",
       "path": "/api/partners/bulk-delete",
       "method": "POST"
+    },
+    {
+      "name": "Create Unit",
+      "path": "/api/units",
+      "method": "POST"
+    },
+    {
+      "name": "Get All Units",
+      "path": "/api/units",
+      "method": "GET"
+    },
+    {
+      "name": "Get Unit By ID",
+      "path": "/api/units/:id",
+      "method": "GET"
+    },
+    {
+      "name": "Update Unit",
+      "path": "/api/units/:id",
+      "method": "PUT"
+    },
+    {
+      "name": "Delete Unit",
+      "path": "/api/units/:id",
+      "method": "DELETE"
+    },
+    {
+      "name": "Bulk Delete Units",
+      "path": "/api/units/bulk-delete",
+      "method": "POST"
     }
   ]
 }
