@@ -37,7 +37,6 @@ const warehouseSchema = new mongoose.Schema(
 );
 
 // Index for faster queries
-warehouseSchema.index({ title: 1 });
 warehouseSchema.index({ managerId: 1 });
 warehouseSchema.index({ status: 1 });
 

@@ -239,13 +239,14 @@
             <button class="nav-btn" onclick="showSection('categories')">Categories</button>
             <button class="nav-btn" onclick="showSection('products')">Products</button>
             <button class="nav-btn" onclick="showSection('warehouses')">Warehouses</button>
+            <button class="nav-btn" onclick="showSection('partners')">Partners</button>
         </div>
 
         <div class="content">
             <!-- Overview Section -->
             <div id="overview" class="section active">
                 <h2>📖 API Overview</h2>
-                <p style="margin: 20px 0;">Welcome to the API documentation. This API provides endpoints for managing authentication, categories, and products.</p>
+                <p style="margin: 20px 0;">Welcome to the API documentation. This API provides endpoints for managing authentication, categories, products, warehouses, and partners.</p>
                 
                 <div class="endpoint">
                     <h3>Base URL</h3>
@@ -1547,6 +1548,394 @@
                         <pre>{
   "success": true,
   "message": "3 warehouse(s) deleted successfully",
+  "data": {
+    "deletedCount": 3
+  }
+}</pre>
+                    </div>
+
+                    <span class="label">Error Response <span class="status-code status-400">400 Bad Request</span>:</span>
+                    <div class="code-block">
+                        <pre>{
+  "success": false,
+  "message": "\"ids\" must contain at least 1 items"
+}</pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Partners Section -->
+            <div id="partners" class="section">
+                <h2>🤝 Partners Endpoints</h2>
+                <input type="text" class="search-box" placeholder="Search endpoints..." onkeyup="filterEndpoints(this, 'partners')">
+
+                <!-- Create Partner -->
+                <div class="endpoint" data-search="create partner add new customer supplier">
+                    <div class="endpoint-header">
+                        <span class="method post">POST</span>
+                        <span class="endpoint-path">/api/partners</span>
+                    </div>
+                    <p class="endpoint-desc">Create a new partner (customer or supplier)</p>
+                    
+                    <span class="label">Request Body:</span>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Field</th>
+                                <th>Type</th>
+                                <th>Required</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>name</td>
+                                <td>string</td>
+                                <td><span class="badge required">Required</span></td>
+                                <td>Partner name (max 100 chars)</td>
+                            </tr>
+                            <tr>
+                                <td>phoneNumber</td>
+                                <td>string</td>
+                                <td><span class="badge required">Required</span></td>
+                                <td>Phone number (max 20 chars)</td>
+                            </tr>
+                            <tr>
+                                <td>description</td>
+                                <td>string</td>
+                                <td><span class="badge optional">Optional</span></td>
+                                <td>Partner description (max 500 chars)</td>
+                            </tr>
+                            <tr>
+                                <td>type</td>
+                                <td>string</td>
+                                <td><span class="badge required">Required</span></td>
+                                <td>"Customer" or "Supplier"</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <span class="label">Example Request:</span>
+                    <div class="code-block">
+                        <pre>{
+  "name": "Tech Solutions Inc",
+  "phoneNumber": "+1-555-0123",
+  "description": "Leading technology supplier",
+  "type": "Supplier"
+}</pre>
+                    </div>
+
+                    <span class="label">Response <span class="status-code status-201">201 Created</span>:</span>
+                    <div class="code-block">
+                        <pre>{
+  "success": true,
+  "message": "Partner created successfully",
+  "data": {
+    "_id": "507f1f77bcf86cd799439017",
+    "name": "Tech Solutions Inc",
+    "phoneNumber": "+1-555-0123",
+    "description": "Leading technology supplier",
+    "type": "Supplier",
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z"
+  }
+}</pre>
+                    </div>
+                </div>
+
+                <!-- Get All Partners -->
+                <div class="endpoint" data-search="get all partners list fetch filter search customer supplier">
+                    <div class="endpoint-header">
+                        <span class="method get">GET</span>
+                        <span class="endpoint-path">/api/partners</span>
+                    </div>
+                    <p class="endpoint-desc">Get all partners with optional filtering, searching, and pagination</p>
+                    
+                    <span class="label">Query Parameters:</span>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Parameter</th>
+                                <th>Type</th>
+                                <th>Required</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>type</td>
+                                <td>string</td>
+                                <td><span class="badge optional">Optional</span></td>
+                                <td>Filter by type (Customer/Supplier)</td>
+                            </tr>
+                            <tr>
+                                <td>search</td>
+                                <td>string</td>
+                                <td><span class="badge optional">Optional</span></td>
+                                <td>Search in name, phone, or description</td>
+                            </tr>
+                            <tr>
+                                <td>page</td>
+                                <td>number</td>
+                                <td><span class="badge optional">Optional</span></td>
+                                <td>Page number (default: 1)</td>
+                            </tr>
+                            <tr>
+                                <td>limit</td>
+                                <td>number</td>
+                                <td><span class="badge optional">Optional</span></td>
+                                <td>Items per page (default: 10)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <span class="label">Example Request:</span>
+                    <div class="code-block">
+                        <pre>GET /api/partners?type=Supplier&search=tech&page=1&limit=10</pre>
+                    </div>
+
+                    <span class="label">Response <span class="status-code status-200">200 OK</span>:</span>
+                    <div class="code-block">
+                        <pre>{
+  "success": true,
+  "data": [
+    {
+      "_id": "507f1f77bcf86cd799439017",
+      "name": "Tech Solutions Inc",
+      "phoneNumber": "+1-555-0123",
+      "description": "Leading technology supplier",
+      "type": "Supplier",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    },
+    {
+      "_id": "507f1f77bcf86cd799439018",
+      "name": "Global Supplies Co",
+      "phoneNumber": "+1-555-0456",
+      "description": "International supplier",
+      "type": "Supplier",
+      "createdAt": "2024-01-02T00:00:00.000Z",
+      "updatedAt": "2024-01-02T00:00:00.000Z"
+    }
+  ],
+  "pagination": {
+    "total": 15,
+    "page": 1,
+    "limit": 10,
+    "pages": 2
+  }
+}</pre>
+                    </div>
+                </div>
+
+                <!-- Get Partner by ID -->
+                <div class="endpoint" data-search="get partner by id single one">
+                    <div class="endpoint-header">
+                        <span class="method get">GET</span>
+                        <span class="endpoint-path">/api/partners/:id</span>
+                    </div>
+                    <p class="endpoint-desc">Get a single partner by ID</p>
+                    
+                    <span class="label">URL Parameters:</span>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Parameter</th>
+                                <th>Type</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>id</td>
+                                <td>string</td>
+                                <td>MongoDB ObjectId of the partner</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <span class="label">Response <span class="status-code status-200">200 OK</span>:</span>
+                    <div class="code-block">
+                        <pre>{
+  "success": true,
+  "data": {
+    "_id": "507f1f77bcf86cd799439017",
+    "name": "Tech Solutions Inc",
+    "phoneNumber": "+1-555-0123",
+    "description": "Leading technology supplier",
+    "type": "Supplier",
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z"
+  }
+}</pre>
+                    </div>
+
+                    <span class="label">Error Response <span class="status-code status-404">404 Not Found</span>:</span>
+                    <div class="code-block">
+                        <pre>{
+  "success": false,
+  "message": "Partner not found"
+}</pre>
+                    </div>
+                </div>
+
+                <!-- Update Partner -->
+                <div class="endpoint" data-search="update partner edit modify">
+                    <div class="endpoint-header">
+                        <span class="method put">PUT</span>
+                        <span class="endpoint-path">/api/partners/:id</span>
+                    </div>
+                    <p class="endpoint-desc">Update a partner by ID</p>
+                    
+                    <span class="label">URL Parameters:</span>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Parameter</th>
+                                <th>Type</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>id</td>
+                                <td>string</td>
+                                <td>MongoDB ObjectId of the partner</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <span class="label">Request Body (all fields optional, at least one required):</span>
+                    <div class="code-block">
+                        <pre>{
+  "name": "Tech Solutions International",
+  "phoneNumber": "+1-555-9999",
+  "type": "Customer"
+}</pre>
+                    </div>
+
+                    <span class="label">Response <span class="status-code status-200">200 OK</span>:</span>
+                    <div class="code-block">
+                        <pre>{
+  "success": true,
+  "message": "Partner updated successfully",
+  "data": {
+    "_id": "507f1f77bcf86cd799439017",
+    "name": "Tech Solutions International",
+    "phoneNumber": "+1-555-9999",
+    "description": "Leading technology supplier",
+    "type": "Customer",
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T12:00:00.000Z"
+  }
+}</pre>
+                    </div>
+
+                    <span class="label">Error Response <span class="status-code status-404">404 Not Found</span>:</span>
+                    <div class="code-block">
+                        <pre>{
+  "success": false,
+  "message": "Partner not found"
+}</pre>
+                    </div>
+                </div>
+
+                <!-- Delete Partner -->
+                <div class="endpoint" data-search="delete partner remove">
+                    <div class="endpoint-header">
+                        <span class="method delete">DELETE</span>
+                        <span class="endpoint-path">/api/partners/:id</span>
+                    </div>
+                    <p class="endpoint-desc">Delete a partner by ID</p>
+                    
+                    <span class="label">URL Parameters:</span>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Parameter</th>
+                                <th>Type</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>id</td>
+                                <td>string</td>
+                                <td>MongoDB ObjectId of the partner</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <span class="label">Response <span class="status-code status-200">200 OK</span>:</span>
+                    <div class="code-block">
+                        <pre>{
+  "success": true,
+  "message": "Partner deleted successfully",
+  "data": {
+    "_id": "507f1f77bcf86cd799439017",
+    "name": "Tech Solutions Inc",
+    "phoneNumber": "+1-555-0123",
+    "description": "Leading technology supplier",
+    "type": "Supplier",
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z"
+  }
+}</pre>
+                    </div>
+
+                    <span class="label">Error Response <span class="status-code status-404">404 Not Found</span>:</span>
+                    <div class="code-block">
+                        <pre>{
+  "success": false,
+  "message": "Partner not found"
+}</pre>
+                    </div>
+                </div>
+
+                <!-- Bulk Delete Partners -->
+                <div class="endpoint" data-search="bulk delete partners multiple remove">
+                    <div class="endpoint-header">
+                        <span class="method post">POST</span>
+                        <span class="endpoint-path">/api/partners/bulk-delete</span>
+                    </div>
+                    <p class="endpoint-desc">Delete multiple partners in a single operation</p>
+                    
+                    <span class="label">Request Body:</span>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Field</th>
+                                <th>Type</th>
+                                <th>Required</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>ids</td>
+                                <td>array</td>
+                                <td><span class="badge required">Required</span></td>
+                                <td>Array of MongoDB ObjectIds (min 1 item)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <span class="label">Example Request:</span>
+                    <div class="code-block">
+                        <pre>{
+  "ids": [
+    "507f1f77bcf86cd799439017",
+    "507f1f77bcf86cd799439018",
+    "507f1f77bcf86cd799439019"
+  ]
+}</pre>
+                    </div>
+
+                    <span class="label">Response <span class="status-code status-200">200 OK</span>:</span>
+                    <div class="code-block">
+                        <pre>{
+  "success": true,
+  "message": "3 partner(s) deleted successfully",
   "data": {
     "deletedCount": 3
   }

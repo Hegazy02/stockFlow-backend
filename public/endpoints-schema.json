@@ -90,6 +90,36 @@
       "name": "Bulk Delete Warehouses",
       "path": "/api/warehouses/bulk-delete",
       "method": "POST"
+    },
+    {
+      "name": "Create Partner",
+      "path": "/api/partners",
+      "method": "POST"
+    },
+    {
+      "name": "Get All Partners",
+      "path": "/api/partners",
+      "method": "GET"
+    },
+    {
+      "name": "Get Partner By ID",
+      "path": "/api/partners/:id",
+      "method": "GET"
+    },
+    {
+      "name": "Update Partner",
+      "path": "/api/partners/:id",
+      "method": "PUT"
+    },
+    {
+      "name": "Delete Partner",
+      "path": "/api/partners/:id",
+      "method": "DELETE"
+    },
+    {
+      "name": "Bulk Delete Partners",
+      "path": "/api/partners/bulk-delete",
+      "method": "POST"
     }
   ]
 }

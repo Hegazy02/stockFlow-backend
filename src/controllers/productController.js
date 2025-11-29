@@ -85,8 +85,6 @@ const getAllProducts = async (req, res, next) => {
       .skip(skip)
       .limit(parseInt(limit))
       .sort({ createdAt: -1 });
-    console.log("categoryId:", categoryId);
-    console.log("prod:", products.length);
 
     // Get total count for pagination
     const total = await Product.countDocuments(filter);

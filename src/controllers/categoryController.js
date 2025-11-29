@@ -9,7 +9,9 @@ const createCategory = async (req, res, next) => {
     const { name, description, status } = req.body;
 
     // Check if category with same name already exists (case-insensitive)
-    const existingCategory = await Category.findOne({ name: name.trim() }).collation({ locale: "en", strength: 2 });
+    const existingCategory = await Category.findOne({
+      name: name.trim(),
+    }).collation({ locale: "en", strength: 2 });
     if (existingCategory) {
       return res.status(400).json({
         success: false,
@@ -44,21 +46,21 @@ const createCategory = async (req, res, next) => {
 };
 
 /**
- * Get all categories with optional filtering and pagination
+ * Get all categories with optional filtering
  * @route GET /api/categories
  */
 const getAllCategories = async (req, res, next) => {
   try {
-    const { status, search, page = 1, limit = 10 } = req.query;
+    const { status, search } = req.query;
 
     // Build filter object
     const filter = {};
-    
+
     // Filter by status if provided
     if (status) {
       filter.status = status;
     }
-    
+
     // Search in name or description if search term provided
     if (search) {
       filter.$or = [
@@ -67,14 +69,8 @@ const getAllCategories = async (req, res, next) => {
       ];
     }
 
-    // Calculate pagination
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-
     // Get categories with pagination and sorting
-    const categories = await Category.find(filter)
-      .skip(skip)
-      .limit(parseInt(limit))
-      .sort({ createdAt: -1 }); // Sort by creation date descending (newest first)
+    const categories = await Category.find(filter).sort({ createdAt: -1 }); // Sort by creation date descending (newest first)
 
     // Get total count for pagination
     const total = await Category.countDocuments(filter);
@@ -84,9 +80,9 @@ const getAllCategories = async (req, res, next) => {
       data: categories,
       pagination: {
         total,
-        page: parseInt(page),
-        limit: parseInt(limit),
-        pages: Math.ceil(total / parseInt(limit)),
+        page: null,
+        limit: null,
+        pages: null,
       },
     });
   } catch (error) {
@@ -140,11 +136,11 @@ const updateCategory = async (req, res, next) => {
 
     // If name is being updated, check for duplicates (excluding current category)
     if (name && name.trim() !== existingCategory.name) {
-      const duplicateCategory = await Category.findOne({ 
+      const duplicateCategory = await Category.findOne({
         name: name.trim(),
-        _id: { $ne: id }
+        _id: { $ne: id },
       }).collation({ locale: "en", strength: 2 });
-      
+
       if (duplicateCategory) {
         return res.status(400).json({
           success: false,
@@ -156,18 +152,15 @@ const updateCategory = async (req, res, next) => {
     // Prepare update data
     const updateData = {};
     if (name !== undefined) updateData.name = name.trim();
-    if (description !== undefined) updateData.description = description ? description.trim() : description;
+    if (description !== undefined)
+      updateData.description = description ? description.trim() : description;
     if (status !== undefined) updateData.status = status;
 
     // Update category with validation
-    const updatedCategory = await Category.findByIdAndUpdate(
-      id,
-      updateData,
-      { 
-        new: true, // Return the updated document
-        runValidators: true // Run schema validators
-      }
-    );
+    const updatedCategory = await Category.findByIdAndUpdate(id, updateData, {
+      new: true, // Return the updated document
+      runValidators: true, // Run schema validators
+    });
 
     res.status(200).json({
       success: true,
