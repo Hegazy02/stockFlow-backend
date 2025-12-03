@@ -150,6 +150,36 @@
       "name": "Bulk Delete Units",
       "path": "/api/units/bulk-delete",
       "method": "POST"
+    },
+    {
+      "name": "Create Transaction",
+      "path": "/api/transactions",
+      "method": "POST"
+    },
+    {
+      "name": "Get All Transactions",
+      "path": "/api/transactions",
+      "method": "GET"
+    },
+    {
+      "name": "Get Transaction By ID",
+      "path": "/api/transactions/:id",
+      "method": "GET"
+    },
+    {
+      "name": "Delete Transaction",
+      "path": "/api/transactions/:id",
+      "method": "DELETE"
+    },
+    {
+      "name": "Bulk Delete Transactions",
+      "path": "/api/transactions/bulk-delete",
+      "method": "POST"
+    },
+    {
+      "name": "Get Transaction Stats",
+      "path": "/api/transactions/stats",
+      "method": "GET"
     }
   ]
 }

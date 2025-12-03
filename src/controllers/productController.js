@@ -66,28 +66,112 @@ const getAllProducts = async (req, res, next) => {
   try {
     const { status, categoryId, name, page = 1, limit = 10 } = req.query;
 
-    // Build filter object
-    const filter = {};
-    if (status) filter.status = status;
+    // Build match stage for filtering
+    const matchStage = {};
+    if (status) matchStage.status = status;
     if (categoryId) {
-      // Convert categoryId string to ObjectId for proper MongoDB comparison
-      filter.categoryId = new mongoose.Types.ObjectId(categoryId);
+      matchStage.categoryId = new mongoose.Types.ObjectId(categoryId);
     }
     if (name) {
-      filter.name = { $regex: name, $options: "i" };
+      matchStage.name = { $regex: name, $options: "i" };
     }
+
     // Calculate pagination
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    // Get products with pagination
-    const products = await Product.find(filter)
-      .populate("category", "name") // populate the virtual
-      .skip(skip)
-      .limit(parseInt(limit))
-      .sort({ createdAt: -1 });
+    // Aggregation pipeline to calculate quantity from transactions
+    const products = await Product.aggregate([
+      // Match products based on filters
+      { $match: matchStage },
+      
+      // Lookup transactions that contain this product
+      {
+        $lookup: {
+          from: "transactions",
+          let: { productId: "$_id" },
+          pipeline: [
+            { $unwind: "$products" },
+            { $match: { $expr: { $eq: ["$products.productId", "$$productId"] } } },
+            {
+              $project: {
+                transactionType: 1,
+                quantity: "$products.quantity"
+              }
+            }
+          ],
+          as: "transactions"
+        }
+      },
+      
+      // Calculate quantity from transactions
+      {
+        $addFields: {
+          quantity: {
+            $reduce: {
+              input: "$transactions",
+              initialValue: 0,
+              in: {
+                $cond: [
+                  { $eq: ["$$this.transactionType", "addition"] },
+                  { $add: ["$$value", "$$this.quantity"] },
+                  { $subtract: ["$$value", "$$this.quantity"] }
+                ]
+              }
+            }
+          }
+        }
+      },
+      
+      // Lookup category information
+      {
+        $lookup: {
+          from: "categories",
+          localField: "categoryId",
+          foreignField: "_id",
+          as: "category"
+        }
+      },
+      
+      // Unwind category array (convert from array to object)
+      {
+        $unwind: {
+          path: "$category",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      
+      // Project only needed category fields
+      {
+        $addFields: {
+          category: {
+            _id: "$category._id",
+            name: "$category.name"
+          }
+        }
+      },
+      
+      // Remove transactions array from output
+      {
+        $project: {
+          transactions: 0
+        }
+      },
+      
+      // Sort by creation date (newest first)
+      { $sort: { createdAt: -1 } },
+      
+      // Pagination
+      { $skip: skip },
+      { $limit: parseInt(limit) }
+    ]);
 
     // Get total count for pagination
-    const total = await Product.countDocuments(filter);
+    const totalResult = await Product.aggregate([
+      { $match: matchStage },
+      { $count: "total" }
+    ]);
+    
+    const total = totalResult.length > 0 ? totalResult[0].total : 0;
 
     res.status(200).json({
       success: true,
@@ -112,8 +196,86 @@ const getProductById = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const product = await Product.findById(id).populate("category", "name"); // populate the virtual
-    if (!product) {
+    // Use aggregation to calculate quantity from transactions
+    const products = await Product.aggregate([
+      // Match the specific product
+      { $match: { _id: new mongoose.Types.ObjectId(id) } },
+      
+      // Lookup transactions that contain this product
+      {
+        $lookup: {
+          from: "transactions",
+          let: { productId: "$_id" },
+          pipeline: [
+            { $unwind: "$products" },
+            { $match: { $expr: { $eq: ["$products.productId", "$$productId"] } } },
+            {
+              $project: {
+                transactionType: 1,
+                quantity: "$products.quantity"
+              }
+            }
+          ],
+          as: "transactions"
+        }
+      },
+      
+      // Calculate quantity from transactions
+      {
+        $addFields: {
+          quantity: {
+            $reduce: {
+              input: "$transactions",
+              initialValue: 0,
+              in: {
+                $cond: [
+                  { $eq: ["$$this.transactionType", "addition"] },
+                  { $add: ["$$value", "$$this.quantity"] },
+                  { $subtract: ["$$value", "$$this.quantity"] }
+                ]
+              }
+            }
+          }
+        }
+      },
+      
+      // Lookup category information
+      {
+        $lookup: {
+          from: "categories",
+          localField: "categoryId",
+          foreignField: "_id",
+          as: "category"
+        }
+      },
+      
+      // Unwind category array
+      {
+        $unwind: {
+          path: "$category",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      
+      // Project only needed category fields
+      {
+        $addFields: {
+          category: {
+            _id: "$category._id",
+            name: "$category.name"
+          }
+        }
+      },
+      
+      // Remove transactions array from output
+      {
+        $project: {
+          transactions: 0
+        }
+      }
+    ]);
+
+    if (!products || products.length === 0) {
       return res.status(404).json({
         success: false,
         message: "Product not found",
@@ -122,7 +284,7 @@ const getProductById = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      data: product,
+      data: products[0],
     });
   } catch (error) {
     next(error);
@@ -192,7 +354,8 @@ const deleteProduct = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const product = await Product.findByIdAndDelete(id);
+    // Check if product exists
+    const product = await Product.findById(id);
 
     if (!product) {
       return res.status(404).json({
@@ -200,6 +363,23 @@ const deleteProduct = async (req, res, next) => {
         message: "Product not found",
       });
     }
+
+    // Check if product is used in any transactions
+    const Transaction = require("../models/Transaction");
+    const transactionCount = await Transaction.countDocuments({
+      "products.productId": new mongoose.Types.ObjectId(id),
+    });
+
+    if (transactionCount > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot delete product that has been used in transactions",
+        transactionCount: transactionCount,
+      });
+    }
+
+    // Delete the product
+    await Product.findByIdAndDelete(id);
 
     res.status(200).json({
       success: true,
@@ -224,6 +404,46 @@ const bulkDeleteProducts = async (req, res, next) => {
       return res.status(400).json({
         success: false,
         message: "Please provide an array of product IDs",
+      });
+    }
+
+    // Check if any products are used in transactions
+    const Transaction = require("../models/Transaction");
+    const objectIds = ids.map((id) => new mongoose.Types.ObjectId(id));
+
+    const productsInTransactions = await Transaction.aggregate([
+      { $unwind: "$products" },
+      { $match: { "products.productId": { $in: objectIds } } },
+      {
+        $group: {
+          _id: "$products.productId",
+          transactionCount: { $sum: 1 },
+        },
+      },
+      {
+        $lookup: {
+          from: "products",
+          localField: "_id",
+          foreignField: "_id",
+          as: "product",
+        },
+      },
+      { $unwind: "$product" },
+      {
+        $project: {
+          productId: "$_id",
+          name: "$product.name",
+          sku: "$product.sku",
+          transactionCount: 1,
+        },
+      },
+    ]);
+
+    if (productsInTransactions.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot delete products that have been used in transactions",
+        productsInTransactions: productsInTransactions,
       });
     }
 

@@ -7,6 +7,7 @@ const categoryRoutes = require('./categoryRoutes');
 const warehouseRoutes = require('./warehouseRoutes');
 const partnerRoutes = require('./partnerRoutes');
 const unitRoutes = require('./unitRoutes');
+const transactionRoutes = require('./transactionRoutes');
 
 /**
  * @route   GET /api/health
@@ -47,5 +48,8 @@ router.use('/partners', partnerRoutes);
 
 // Mount unit routes at /units prefix
 router.use('/units', unitRoutes);
+
+// Mount transaction routes at /transactions prefix
+router.use('/transactions', transactionRoutes);
 
 module.exports = router;

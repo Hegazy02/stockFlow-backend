@@ -1,0 +1,60 @@
+const express = require('express');
+const router = express.Router();
+const {
+  createTransaction,
+  getAllTransactions,
+  getTransactionById,
+  deleteTransaction,
+  bulkDeleteTransactions,
+  getTransactionStats
+} = require('../controllers/transactionController');
+const validate = require('../middleware/validate');
+const {
+  createTransactionSchema,
+  transactionIdSchema,
+  bulkDeleteSchema
+} = require('../validators/transactionValidator');
+
+/**
+ * @route   POST /api/transactions
+ * @desc    Create a new transaction
+ * @access  Private
+ */
+router.post('/', validate(createTransactionSchema), createTransaction);
+
+/**
+ * @route   POST /api/transactions/bulk-delete
+ * @desc    Bulk delete transactions by IDs
+ * @access  Private
+ */
+router.post('/bulk-delete', validate(bulkDeleteSchema), bulkDeleteTransactions);
+
+/**
+ * @route   GET /api/transactions/stats
+ * @desc    Get transaction statistics
+ * @access  Public
+ */
+router.get('/stats', getTransactionStats);
+
+/**
+ * @route   GET /api/transactions
+ * @desc    Get all transactions with optional filtering and pagination
+ * @access  Public
+ */
+router.get('/', getAllTransactions);
+
+/**
+ * @route   GET /api/transactions/:id
+ * @desc    Get a single transaction by ID
+ * @access  Public
+ */
+router.get('/:id', validate(transactionIdSchema), getTransactionById);
+
+/**
+ * @route   DELETE /api/transactions/:id
+ * @desc    Delete a transaction by ID
+ * @access  Private
+ */
+router.delete('/:id', validate(transactionIdSchema), deleteTransaction);
+
+module.exports = router;
