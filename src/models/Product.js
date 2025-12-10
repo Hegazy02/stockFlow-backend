@@ -29,11 +29,11 @@ const productSchema = new mongoose.Schema({
   //   required: [true, "Cost price is required"],
   //   min: [0, "Cost price must be a positive number"],
   // },
-  // sellingPrice: {
-  //   type: Number,
-  //   required: [true, "Selling price is required"],
-  //   min: [0, "Selling price must be a positive number"],
-  // },
+  sellingPrice: {
+    type: Number,
+    required: [true, "Selling price is required"],
+    min: [0, "Selling price must be a positive number"],
+  },
   // supplierId: {
   //   type: mongoose.Schema.Types.ObjectId,
   //   ref: "Supplier",

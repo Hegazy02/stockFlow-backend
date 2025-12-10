@@ -167,6 +167,11 @@
       "method": "GET"
     },
     {
+      "name": "Update Transaction",
+      "path": "/api/transactions/:id",
+      "method": "PUT"
+    },
+    {
       "name": "Delete Transaction",
       "path": "/api/transactions/:id",
       "method": "DELETE"

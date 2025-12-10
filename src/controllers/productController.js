@@ -112,7 +112,7 @@ const getAllProducts = async (req, res, next) => {
               initialValue: 0,
               in: {
                 $cond: [
-                  { $eq: ["$$this.transactionType", "addition"] },
+                  { $eq: ["$$this.transactionType", "purchases"] },
                   { $add: ["$$value", "$$this.quantity"] },
                   { $subtract: ["$$value", "$$this.quantity"] }
                 ]
@@ -229,7 +229,7 @@ const getProductById = async (req, res, next) => {
               initialValue: 0,
               in: {
                 $cond: [
-                  { $eq: ["$$this.transactionType", "addition"] },
+                  { $eq: ["$$this.transactionType", "sales"] },
                   { $add: ["$$value", "$$this.quantity"] },
                   { $subtract: ["$$value", "$$this.quantity"] }
                 ]

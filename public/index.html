@@ -2365,12 +2365,12 @@
                 <input type="text" class="search-box" placeholder="Search endpoints..." onkeyup="filterEndpoints(this, 'transactions')">
 
                 <!-- Create Transaction -->
-                <div class="endpoint" data-search="create transaction add new addition subtraction multiple products bulk">
+                <div class="endpoint" data-search="create transaction add new sales purchases multiple products bulk">
                     <div class="endpoint-header">
                         <span class="method post">POST</span>
                         <span class="endpoint-path">/api/transactions</span>
                     </div>
-                    <p class="endpoint-desc">Create transactions for multiple products (addition or subtraction)</p>
+                    <p class="endpoint-desc">Create transactions for multiple products (sales or purchases)</p>
                     
                     <span class="label">Request Body:</span>
                     <table class="param-table">
@@ -2408,10 +2408,28 @@
                                 <td>Quantity (min 1)</td>
                             </tr>
                             <tr>
+                                <td>products[].costPrice</td>
+                                <td>number</td>
+                                <td><span class="badge required">Required</span></td>
+                                <td>Cost price per unit (min 0)</td>
+                            </tr>
+                            <tr>
                                 <td>transactionType</td>
                                 <td>string</td>
                                 <td><span class="badge required">Required</span></td>
-                                <td>"addition" or "subtraction"</td>
+                                <td>"sales" or "purchases"</td>
+                            </tr>
+                            <tr>
+                                <td>balance</td>
+                                <td>number</td>
+                                <td><span class="badge required">Required</span></td>
+                                <td>Total balance amount (min 0)</td>
+                            </tr>
+                            <tr>
+                                <td>paid</td>
+                                <td>number</td>
+                                <td><span class="badge optional">Optional</span></td>
+                                <td>Paid amount (min 0, default: 0)</td>
                             </tr>
                             <tr>
                                 <td>note</td>
@@ -2429,14 +2447,18 @@
   "products": [
     {
       "productId": "69270a70ec8c76745b8205ae",
-      "quantity": 10
+      "quantity": 10,
+      "costPrice": 100
     },
     {
       "productId": "69270a70ec8c76745b8205b8",
-      "quantity": 5
+      "quantity": 5,
+      "costPrice": 80
     }
   ],
-  "transactionType": "addition",
+  "transactionType": "sales",
+  "balance": 1400,
+  "paid": 500,
   "note": "Initial stock from supplier"
 }</pre>
                     </div>
@@ -2460,7 +2482,8 @@
           "name": "Wireless Mouse",
           "sku": "PROD-001"
         },
-        "quantity": 10
+        "quantity": 10,
+        "costPrice": 100
       },
       {
         "product": {
@@ -2468,10 +2491,14 @@
           "name": "Keyboard",
           "sku": "PROD-002"
         },
-        "quantity": 5
+        "quantity": 5,
+        "costPrice": 80
       }
     ],
-    "transactionType": "addition",
+    "transactionType": "sales",
+    "balance": 1400,
+    "paid": 500,
+    "left": 900,
     "note": "Initial stock from supplier",
     "createdAt": "2024-11-29T10:00:00.000Z"
   }
@@ -2502,6 +2529,16 @@
       "shortage": 5
     }
   ]
+}</pre>
+                    </div>
+
+                    <span class="label">Error Response <span class="status-code status-400">400 Bad Request</span> (Paid Exceeds Balance):</span>
+                    <div class="code-block">
+                        <pre>{
+  "success": false,
+  "message": "Paid amount cannot be more than balance",
+  "balance": 1000,
+  "paid": 1500
 }</pre>
                     </div>
                 </div>
@@ -2553,7 +2590,7 @@
                                 <td>transactionType</td>
                                 <td>string</td>
                                 <td><span class="badge optional">Optional</span></td>
-                                <td>Filter by type (addition/subtraction)</td>
+                                <td>Filter by type (sales/purchases)</td>
                             </tr>
                             <tr>
                                 <td>startDate</td>
@@ -2584,7 +2621,7 @@
 
                     <span class="label">Example Requests:</span>
                     <div class="code-block">
-                        <pre>GET /api/transactions?transactionType=addition&page=1&limit=10
+                        <pre>GET /api/transactions?transactionType=sales&page=1&limit=10
 GET /api/transactions?product=mouse&partner=tech
 GET /api/transactions?productId=507f1f77bcf86cd799439013&startDate=2024-11-01</pre>
                     </div>
@@ -2615,7 +2652,7 @@ GET /api/transactions?productId=507f1f77bcf86cd799439013&startDate=2024-11-01</p
           "sku": "PROD-002"
         }
       ],
-      "transactionType": "addition",
+      "transactionType": "sales",
       "note": "Initial stock from supplier",
       "createdAt": "2024-11-29T10:00:00.000Z"
     }
@@ -2662,7 +2699,7 @@ GET /api/transactions?productId=507f1f77bcf86cd799439013&startDate=2024-11-01</p
   "success": true,
   "data": {
     "_id": "507f1f77bcf86cd799439023",
-    "partnerId": {
+    "partner": {
       "_id": "507f1f77bcf86cd799439017",
       "name": "Tech Solutions Inc",
       "type": "Supplier",
@@ -2675,7 +2712,9 @@ GET /api/transactions?productId=507f1f77bcf86cd799439013&startDate=2024-11-01</p
           "name": "Wireless Mouse",
           "sku": "PROD-001"
         },
-        "quantity": 50
+        "quantity": 50,
+        "costPrice": 100,
+        "sellingPrice": 150
       },
       {
         "product": {
@@ -2683,10 +2722,15 @@ GET /api/transactions?productId=507f1f77bcf86cd799439013&startDate=2024-11-01</p
           "name": "Keyboard",
           "sku": "PROD-002"
         },
-        "quantity": 25
+        "quantity": 25,
+        "costPrice": 80,
+        "sellingPrice": 120
       }
     ],
-    "transactionType": "addition",
+    "transactionType": "sales",
+    "balance": 7000,
+    "paid": 3000,
+    "left": 4000,
     "note": "Initial stock from supplier",
     "createdAt": "2024-11-29T10:00:00.000Z"
   }
@@ -2698,6 +2742,126 @@ GET /api/transactions?productId=507f1f77bcf86cd799439013&startDate=2024-11-01</p
                         <pre>{
   "success": false,
   "message": "Transaction not found"
+}</pre>
+                    </div>
+                </div>
+
+                <!-- Update Transaction -->
+                <div class="endpoint" data-search="update transaction edit modify payment">
+                    <div class="endpoint-header">
+                        <span class="method put">PUT</span>
+                        <span class="endpoint-path">/api/transactions/:id</span>
+                    </div>
+                    <p class="endpoint-desc">Update transaction payment details (balance, paid, note)</p>
+                    
+                    <span class="label">URL Parameters:</span>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Parameter</th>
+                                <th>Type</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>id</td>
+                                <td>string</td>
+                                <td>MongoDB ObjectId of the transaction</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <span class="label">Request Body (all fields optional, at least one required):</span>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Field</th>
+                                <th>Type</th>
+                                <th>Required</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>balance</td>
+                                <td>number</td>
+                                <td><span class="badge optional">Optional</span></td>
+                                <td>Total balance amount (min 0)</td>
+                            </tr>
+                            <tr>
+                                <td>paid</td>
+                                <td>number</td>
+                                <td><span class="badge optional">Optional</span></td>
+                                <td>Paid amount (min 0)</td>
+                            </tr>
+                            <tr>
+                                <td>note</td>
+                                <td>string</td>
+                                <td><span class="badge optional">Optional</span></td>
+                                <td>Transaction note (max 500 chars)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <span class="label">Example Request:</span>
+                    <div class="code-block">
+                        <pre>{
+  "paid": 1000,
+  "note": "Partial payment received"
+}</pre>
+                    </div>
+
+                    <span class="label">Response <span class="status-code status-200">200 OK</span>:</span>
+                    <div class="code-block">
+                        <pre>{
+  "success": true,
+  "message": "Transaction updated successfully",
+  "data": {
+    "_id": "507f1f77bcf86cd799439023",
+    "partnerId": {
+      "_id": "692af45cc1bbd2bb6d88c652",
+      "name": "Tech Solutions Inc",
+      "type": "Supplier"
+    },
+    "products": [
+      {
+        "product": {
+          "_id": "69270a70ec8c76745b8205ae",
+          "name": "Wireless Mouse",
+          "sku": "PROD-001"
+        },
+        "quantity": 10,
+        "costPrice": 100
+      }
+    ],
+    "transactionType": "sales",
+    "balance": 1000,
+    "paid": 1000,
+    "left": 0,
+    "note": "Partial payment received",
+    "createdAt": "2024-11-29T10:00:00.000Z"
+  }
+}</pre>
+                    </div>
+
+                    <span class="label">Error Response <span class="status-code status-404">404 Not Found</span>:</span>
+                    <div class="code-block">
+                        <pre>{
+  "success": false,
+  "message": "Transaction not found"
+}</pre>
+                    </div>
+
+                    <span class="label">Error Response <span class="status-code status-400">400 Bad Request</span> (Paid Exceeds Balance):</span>
+                    <div class="code-block">
+                        <pre>{
+  "success": false,
+  "message": "Paid amount cannot be more than balance",
+  "currentBalance": 1000,
+  "currentPaid": 500,
+  "requestedBalance": 1000,
+  "requestedPaid": 1500
 }</pre>
                     </div>
                 </div>
@@ -2737,7 +2901,7 @@ GET /api/transactions?productId=507f1f77bcf86cd799439013&startDate=2024-11-01</p
     "_id": "507f1f77bcf86cd799439023",
     "productId": "507f1f77bcf86cd799439013",
     "partnerId": "507f1f77bcf86cd799439017",
-    "transactionType": "addition",
+    "transactionType": "sales",
     "quantity": 50,
     "note": "Initial stock from supplier",
     "createdAt": "2024-11-29T10:00:00.000Z"
@@ -2869,11 +3033,11 @@ GET /api/transactions?productId=507f1f77bcf86cd799439013&startDate=2024-11-01</p
                         <pre>{
   "success": true,
   "data": {
-    "addition": {
+    "sales": {
       "totalQuantity": 150,
       "count": 3
     },
-    "subtraction": {
+    "purchases": {
       "totalQuantity": 45,
       "count": 2
     }

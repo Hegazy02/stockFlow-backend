@@ -6,21 +6,19 @@ const mongoose = require("mongoose");
 // Create a new transaction (single transaction with multiple products)
 const createTransaction = async (req, res, next) => {
   try {
-    const { partnerId, products, transactionType, note } = req.body;
+    const { partnerId, products, transactionType, balance, paid, note } =
+      req.body;
 
-    // Verify partner exists
+    // 1️⃣ Verify partner exists
     const partner = await Partner.findById(partnerId);
-    if (!partner) {
-      return res.status(404).json({
-        success: false,
-        message: "Partner not found",
-      });
+    if (!partner && transactionType == "purchases") {
+      return res
+        .status(404)
+        .json({ success: false, message: "Partner not found" });
     }
 
-    // Extract unique product IDs
+    // 2️⃣ Verify all products exist
     const productIds = [...new Set(products.map((p) => p.productId))];
-
-    // Verify all products exist
     const existingProducts = await Product.find({ _id: { $in: productIds } });
 
     if (existingProducts.length !== productIds.length) {
@@ -34,27 +32,37 @@ const createTransaction = async (req, res, next) => {
       });
     }
 
-    // If transaction type is subtraction, validate quantities
-    if (transactionType === "subtraction") {
-      // Calculate current quantities for all products
+    // 3️⃣ Validate stock for sales
+    if (transactionType === "sales") {
+      // Compute current stock for each product
       const currentQuantities = await Product.aggregate([
-        { $match: { _id: { $in: productIds.map(id => new mongoose.Types.ObjectId(id)) } } },
+        {
+          $match: {
+            _id: {
+              $in: productIds.map((id) => new mongoose.Types.ObjectId(id)),
+            },
+          },
+        },
         {
           $lookup: {
             from: "transactions",
             let: { productId: "$_id" },
             pipeline: [
               { $unwind: "$products" },
-              { $match: { $expr: { $eq: ["$products.productId", "$$productId"] } } },
+              {
+                $match: {
+                  $expr: { $eq: ["$products.productId", "$$productId"] },
+                },
+              },
               {
                 $project: {
                   transactionType: 1,
-                  quantity: "$products.quantity"
-                }
-              }
+                  quantity: "$products.quantity",
+                },
+              },
             ],
-            as: "transactions"
-          }
+            as: "transactions",
+          },
         },
         {
           $addFields: {
@@ -64,34 +72,27 @@ const createTransaction = async (req, res, next) => {
                 initialValue: 0,
                 in: {
                   $cond: [
-                    { $eq: ["$$this.transactionType", "addition"] },
-                    { $add: ["$$value", "$$this.quantity"] },
-                    { $subtract: ["$$value", "$$this.quantity"] }
-                  ]
-                }
-              }
-            }
-          }
+                    { $eq: ["$$this.transactionType", "purchases"] }, // if addition (purchase)
+                    { $add: ["$$value", "$$this.quantity"] }, // increase stock
+                    { $subtract: ["$$value", "$$this.quantity"] }, // else (sales) decrease stock
+                  ],
+                },
+              },
+            },
+          },
         },
-        {
-          $project: {
-            _id: 1,
-            name: 1,
-            sku: 1,
-            currentQuantity: 1
-          }
-        }
+        { $project: { _id: 1, name: 1, sku: 1, currentQuantity: 1 } },
       ]);
 
-      // Check if any product will have negative quantity
+      // Check for insufficient stock
       const insufficientProducts = [];
       for (const product of products) {
         const productData = currentQuantities.find(
           (p) => p._id.toString() === product.productId
         );
-        
         if (productData) {
-          const newQuantity = productData.currentQuantity - parseInt(product.quantity);
+          const newQuantity =
+            productData.currentQuantity - parseInt(product.quantity);
           if (newQuantity < 0) {
             insufficientProducts.push({
               productId: productData._id,
@@ -99,7 +100,7 @@ const createTransaction = async (req, res, next) => {
               sku: productData.sku,
               currentQuantity: productData.currentQuantity,
               requestedQuantity: parseInt(product.quantity),
-              shortage: Math.abs(newQuantity)
+              shortage: Math.abs(newQuantity),
             });
           }
         }
@@ -109,35 +110,59 @@ const createTransaction = async (req, res, next) => {
         return res.status(400).json({
           success: false,
           message: "Insufficient quantity for one or more products",
-          insufficientProducts: insufficientProducts
+          insufficientProducts,
         });
       }
     }
 
-    // Create single transaction with products array
+    // 4️⃣ Validate payment
+    const finalBalance = balance || 0;
+    const finalPaid = paid || 0;
+    if (+finalPaid > +finalBalance) {
+      return res.status(400).json({
+        success: false,
+        message: "Paid amount cannot be more than balance",
+        balance: finalBalance,
+        paid: finalPaid,
+      });
+    }
+
+    // 5️⃣ Create transaction
     const transaction = new Transaction({
-      partnerId,
-      products: products.map((item) => ({
-        productId: item.productId,
-        quantity: parseInt(item.quantity),
+      partnerId: partnerId || null,
+      products: products.map((p) => ({
+        productId: p.productId,
+        quantity: parseInt(p.quantity),
+        costPrice: parseFloat(p.costPrice),
       })),
       transactionType,
+      balance: finalBalance,
+      paid: finalPaid,
       note: note || "",
     });
 
     await transaction.save();
 
-    // Populate references for response
-    await transaction.populate([
-      { path: "products.productId", select: "name sku" },
-      { path: "partnerId", select: "name type" },
-    ]);
+    // 6️⃣ Populate references conditionally
+    const populateOptions = [
+      { path: "products.productId", select: "name sku costPrice" },
+    ];
 
-    // Transform response to use 'product' instead of 'productId'
+    if (transaction.partnerId) {
+      populateOptions.push({
+        path: "partnerId",
+        select: "name type",
+      });
+    }
+
+    await transaction.populate(populateOptions);
+
+    // 7️⃣ Format response
     const responseData = transaction.toObject();
     responseData.products = responseData.products.map((item) => ({
       product: item.productId,
       quantity: item.quantity,
+      costPrice: item.costPrice,
     }));
 
     res.status(201).json({
@@ -197,7 +222,7 @@ const getAllTransactions = async (req, res, next) => {
           as: "partner",
         },
       },
-      { $unwind: "$partner" },
+      { $unwind: { path: "$partner", preserveNullAndEmptyArrays: true } },
 
       // 3️⃣ Lookup products
       {
@@ -220,16 +245,28 @@ const getAllTransactions = async (req, res, next) => {
                 productId: "$$prod.productId",
                 quantity: "$$prod.quantity",
                 productInfo: {
-                  $arrayElemAt: [
-                    {
-                      $filter: {
-                        input: "$productDetails",
-                        as: "detail",
-                        cond: { $eq: ["$$detail._id", "$$prod.productId"] },
+                  $let: {
+                    vars: {
+                      matchedProduct: {
+                        $arrayElemAt: [
+                          {
+                            $filter: {
+                              input: "$productDetails",
+                              as: "detail",
+                              cond: { $eq: ["$$detail._id", "$$prod.productId"] },
+                            },
+                          },
+                          0,
+                        ],
                       },
                     },
-                    0,
-                  ],
+                    in: {
+                      _id: "$$matchedProduct._id",
+                      name: "$$matchedProduct.name",
+                      sku: "$$matchedProduct.sku",
+                      sellingPrice: "$$matchedProduct.sellingPrice",
+                    },
+                  },
                 },
               },
             },
@@ -269,12 +306,18 @@ const getAllTransactions = async (req, res, next) => {
       // 9️⃣ Clean up fields
       {
         $project: {
+          _id: 1,
           partnerId: 1,
           transactionType: 1,
           createdAt: 1,
           note: 1,
+          balance: 1,
+          paid: 1,
+          left: 1,
+
           "partner.name": 1,
           "partner.type": 1,
+
           products: {
             $map: {
               input: "$products",
@@ -282,6 +325,20 @@ const getAllTransactions = async (req, res, next) => {
               in: {
                 productId: "$$p.productId",
                 quantity: "$$p.quantity",
+                costPrice: {
+                  $cond: {
+                    if: { $eq: ["$transactionType", "purchases"] },
+                    then: "$$p.costPrice",
+                    else: "$$REMOVE",
+                  },
+                },
+                sellingPrice: {
+                  $cond: {
+                    if: { $eq: ["$transactionType", "sales"] },
+                    then: "$$p.productInfo.sellingPrice",
+                    else: "$$REMOVE",
+                  },
+                },
                 name: "$$p.productInfo.name",
                 sku: "$$p.productInfo.sku",
               },
@@ -335,7 +392,7 @@ const getTransactionById = async (req, res, next) => {
           as: "partner",
         },
       },
-      { $unwind: "$partner" },
+      { $unwind: { path: "$partner", preserveNullAndEmptyArrays: true } },
 
       // Lookup products
       {
@@ -355,30 +412,35 @@ const getTransactionById = async (req, res, next) => {
               input: "$products",
               as: "prod",
               in: {
-                product: {
-                  $let: {
-                    vars: {
-                      matchedProduct: {
-                        $arrayElemAt: [
-                          {
-                            $filter: {
-                              input: "$productDetails",
-                              as: "detail",
-                              cond: { $eq: ["$$detail._id", "$$prod.productId"] },
+                $let: {
+                  vars: {
+                    matchedProduct: {
+                      $arrayElemAt: [
+                        {
+                          $filter: {
+                            input: "$productDetails",
+                            as: "detail",
+                            cond: {
+                              $eq: ["$$detail._id", "$$prod.productId"],
                             },
                           },
-                          0,
-                        ],
-                      },
+                        },
+                        0,
+                      ],
                     },
-                    in: {
+                  },
+                  in: {
+                    product: {
                       _id: "$$matchedProduct._id",
                       name: "$$matchedProduct.name",
                       sku: "$$matchedProduct.sku",
+                      sellingPrice: "$$matchedProduct.sellingPrice",
                     },
+                    quantity: "$$prod.quantity",
+                    costPrice: "$$prod.costPrice",
+                    sellingPrice: "$$matchedProduct.sellingPrice",
                   },
                 },
-                quantity: "$$prod.quantity",
               },
             },
           },
@@ -389,7 +451,7 @@ const getTransactionById = async (req, res, next) => {
       {
         $project: {
           _id: 1,
-          partnerId: {
+          partner: {
             _id: "$partner._id",
             name: "$partner.name",
             type: "$partner.type",
@@ -397,6 +459,9 @@ const getTransactionById = async (req, res, next) => {
           },
           products: 1,
           transactionType: 1,
+          balance: 1,
+          paid: 1,
+          left: 1,
           note: 1,
           createdAt: 1,
         },
@@ -413,6 +478,73 @@ const getTransactionById = async (req, res, next) => {
     res.status(200).json({
       success: true,
       data: transactions[0],
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Update a transaction
+const updateTransaction = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { balance, paid, note } = req.body;
+
+    // Get current transaction to validate payment
+    const currentTransaction = await Transaction.findById(id);
+
+    if (!currentTransaction) {
+      return res.status(404).json({
+        success: false,
+        message: "Transaction not found",
+      });
+    }
+
+    // Calculate final balance and paid values
+    const finalBalance =
+      balance !== undefined ? balance : currentTransaction.balance;
+    const finalPaid = paid !== undefined ? paid : currentTransaction.paid;
+
+    // Validate that paid doesn't exceed balance
+    if (finalPaid > finalBalance) {
+      return res.status(400).json({
+        success: false,
+        message: "Paid amount cannot be more than balance",
+        currentBalance: currentTransaction.balance,
+        currentPaid: currentTransaction.paid,
+        requestedBalance: balance,
+        requestedPaid: paid,
+      });
+    }
+
+    const updateData = {};
+    if (balance !== undefined) updateData.balance = balance;
+    if (paid !== undefined) updateData.paid = paid;
+    if (note !== undefined) updateData.note = note;
+
+    const transaction = await Transaction.findByIdAndUpdate(
+      id,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    );
+
+    // Populate references for response
+    await transaction.populate([
+      { path: "products.productId", select: "name sku" },
+      { path: "partnerId", select: "name type" },
+    ]);
+
+    // Transform response to use 'product' instead of 'productId'
+    const responseData = transaction.toObject();
+    responseData.products = responseData.products.map((item) => ({
+      product: item.productId,
+      quantity: item.quantity,
+    }));
+
+    res.status(200).json({
+      success: true,
+      message: "Transaction updated successfully",
+      data: responseData,
     });
   } catch (error) {
     next(error);
@@ -492,8 +624,8 @@ const getTransactionStats = async (req, res, next) => {
     ]);
 
     const formattedStats = {
-      addition: { totalQuantity: 0, count: 0 },
-      subtraction: { totalQuantity: 0, count: 0 },
+      sales: { totalQuantity: 0, count: 0 },
+      purchases: { totalQuantity: 0, count: 0 },
     };
 
     stats.forEach((stat) => {
@@ -516,6 +648,7 @@ module.exports = {
   createTransaction,
   getAllTransactions,
   getTransactionById,
+  updateTransaction,
   deleteTransaction,
   bulkDeleteTransactions,
   getTransactionStats,

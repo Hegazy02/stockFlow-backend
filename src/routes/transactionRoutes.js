@@ -4,6 +4,7 @@ const {
   createTransaction,
   getAllTransactions,
   getTransactionById,
+  updateTransaction,
   deleteTransaction,
   bulkDeleteTransactions,
   getTransactionStats
@@ -11,6 +12,7 @@ const {
 const validate = require('../middleware/validate');
 const {
   createTransactionSchema,
+  updateTransactionSchema,
   transactionIdSchema,
   bulkDeleteSchema
 } = require('../validators/transactionValidator');
@@ -49,6 +51,13 @@ router.get('/', getAllTransactions);
  * @access  Public
  */
 router.get('/:id', validate(transactionIdSchema), getTransactionById);
+
+/**
+ * @route   PUT /api/transactions/:id
+ * @desc    Update a transaction by ID
+ * @access  Private
+ */
+router.put('/:id', validate(transactionIdSchema), validate(updateTransactionSchema), updateTransaction);
 
 /**
  * @route   DELETE /api/transactions/:id

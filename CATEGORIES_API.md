@@ -586,7 +586,7 @@ Use status filtering to show only active categories in product creation forms.
 
 ## Future Enhancements
 
-Potential future additions to the Categories API:
+Potential future saless to the Categories API:
 
 1. **Hierarchical Categories**: Support for parent-child category relationships
 2. **Category Images**: Add image URL field for visual representation

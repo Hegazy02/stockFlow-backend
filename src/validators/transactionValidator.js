@@ -1,13 +1,21 @@
-const Joi = require('joi');
+const Joi = require("joi");
 
 const createTransactionSchema = Joi.object({
-  partnerId: Joi.string()
-    .regex(/^[0-9a-fA-F]{24}$/)
-    .required()
-    .messages({
-      'string.pattern.base': 'Invalid partner ID format',
-      'any.required': 'Partner ID is required'
-    }),
+  partnerId: Joi.when("transactionType", {
+    is: "purchases",
+    then: Joi.string()
+      .regex(/^[0-9a-fA-F]{24}$/)
+      .required()
+      .messages({
+        "string.pattern.base": "Invalid partner ID format",
+        "any.required": "Partner ID is required for purchases",
+      }),
+    otherwise: Joi.string()
+      .regex(/^[0-9a-fA-F]{24}$/)
+      .optional()
+      .allow(null),
+  }),
+
   products: Joi.array()
     .items(
       Joi.object({
@@ -15,52 +23,86 @@ const createTransactionSchema = Joi.object({
           .regex(/^[0-9a-fA-F]{24}$/)
           .required()
           .messages({
-            'string.pattern.base': 'Invalid product ID format',
-            'any.required': 'Product ID is required'
+            "string.pattern.base": "Invalid product ID format",
+            "any.required": "Product ID is required",
           }),
-        quantity: Joi.number()
-          .integer()
-          .min(1)
-          .required()
-          .messages({
-            'number.base': 'Quantity must be a number',
-            'number.integer': 'Quantity must be an integer',
-            'number.min': 'Quantity must be at least 1',
-            'any.required': 'Quantity is required'
-          })
+        quantity: Joi.number().integer().min(1).required().messages({
+          "number.base": "Quantity must be a number",
+          "number.integer": "Quantity must be an integer",
+          "number.min": "Quantity must be at least 1",
+          "any.required": "Quantity is required",
+        }),
+        costPrice: Joi.number().min(0).required().messages({
+          "number.base": "Cost price must be a number",
+          "number.min": "Cost price cannot be negative",
+          "any.required": "Cost price is required",
+        }),
       })
     )
     .min(1)
     .required()
     .messages({
-      'array.min': 'At least one product is required',
-      'any.required': 'Products array is required'
+      "array.min": "At least one product is required",
+      "any.required": "Products array is required",
     }),
   transactionType: Joi.string()
-    .valid('addition', 'subtraction')
+    .valid("sales", "purchases")
     .required()
     .messages({
-      'any.only': 'Transaction type must be either addition or subtraction',
-      'any.required': 'Transaction type is required'
+      "any.only": "Transaction type must be either sales or purchases",
+      "any.required": "Transaction type is required",
     }),
-  note: Joi.string()
-    .trim()
-    .max(500)
-    .allow('')
-    .optional()
-    .messages({
-      'string.max': 'Note cannot exceed 500 characters'
+  balance: Joi.number().min(0).required().messages({
+    "number.base": "Balance must be a number",
+    "number.min": "Balance cannot be negative",
+    "any.required": "Balance is required",
+  }),
+  paid: Joi.number()
+    .min(0)
+    .default(0)
+    .custom((value, helpers) => {
+      const balance = helpers.state.ancestors[0].balance;
+      if (balance !== undefined && value > balance) {
+        return helpers.error("any.invalid");
+      }
+      return value;
     })
+    .messages({
+      "number.base": "Paid amount must be a number",
+      "number.min": "Paid amount cannot be negative",
+      "any.invalid": "Paid amount cannot be more than balance",
+    }),
+  note: Joi.string().trim().max(500).allow("").optional().messages({
+    "string.max": "Note cannot exceed 500 characters",
+  }),
 });
+
+const updateTransactionSchema = Joi.object({
+  balance: Joi.number().min(0).optional().messages({
+    "number.base": "Balance must be a number",
+    "number.min": "Balance cannot be negative",
+  }),
+  paid: Joi.number().min(0).optional().messages({
+    "number.base": "Paid amount must be a number",
+    "number.min": "Paid amount cannot be negative",
+  }),
+  note: Joi.string().trim().max(500).allow("").optional().messages({
+    "string.max": "Note cannot exceed 500 characters",
+  }),
+})
+  .min(1)
+  .messages({
+    "object.min": "At least one field must be provided for update",
+  });
 
 const transactionIdSchema = Joi.object({
   id: Joi.string()
     .regex(/^[0-9a-fA-F]{24}$/)
     .required()
     .messages({
-      'string.pattern.base': 'Invalid transaction ID format',
-      'any.required': 'Transaction ID is required'
-    })
+      "string.pattern.base": "Invalid transaction ID format",
+      "any.required": "Transaction ID is required",
+    }),
 });
 
 const bulkDeleteSchema = Joi.object({
@@ -69,19 +111,20 @@ const bulkDeleteSchema = Joi.object({
       Joi.string()
         .regex(/^[0-9a-fA-F]{24}$/)
         .messages({
-          'string.pattern.base': 'Invalid transaction ID format'
+          "string.pattern.base": "Invalid transaction ID format",
         })
     )
     .min(1)
     .required()
     .messages({
-      'array.min': 'At least one transaction ID is required',
-      'any.required': 'Transaction IDs are required'
-    })
+      "array.min": "At least one transaction ID is required",
+      "any.required": "Transaction IDs are required",
+    }),
 });
 
 module.exports = {
   createTransactionSchema,
+  updateTransactionSchema,
   transactionIdSchema,
-  bulkDeleteSchema
+  bulkDeleteSchema,
 };

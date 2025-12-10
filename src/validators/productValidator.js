@@ -29,14 +29,11 @@ const createProductSchema = Joi.object({
   //     'number.min': 'Cost price must be a positive number',
   //     'number.base': 'Cost price must be a number'
   //   }),
-  // sellingPrice: Joi.number()
-  //   .min(0)
-  //   .required()
-  //   .messages({
-  //     'any.required': 'Selling price is required',
-  //     'number.min': 'Selling price must be a positive number',
-  //     'number.base': 'Selling price must be a number'
-  //   }),
+  sellingPrice: Joi.number().min(0).required().messages({
+    "any.required": "Selling price is required",
+    "number.min": "Selling price must be a positive number",
+    "number.base": "Selling price must be a number",
+  }),
   // supplierId: Joi.string()
   //   .pattern(/^[0-9a-fA-F]{24}$/)
   //   .required()
