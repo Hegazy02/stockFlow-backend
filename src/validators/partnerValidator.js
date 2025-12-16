@@ -33,7 +33,16 @@ const createPartnerSchema = Joi.object({
     .messages({
       'any.only': 'Type must be either Customer or Supplier',
       'any.required': 'Partner type is required'
-    })
+    }),
+  balance: Joi.forbidden().messages({
+    'any.unknown': 'Balance is automatically calculated from transactions and cannot be set manually'
+  }),
+  paid: Joi.forbidden().messages({
+    'any.unknown': 'Paid is automatically calculated from transactions and cannot be set manually'
+  }),
+  left: Joi.forbidden().messages({
+    'any.unknown': 'Left is automatically calculated from transactions and cannot be set manually'
+  })
 });
 
 const updatePartnerSchema = Joi.object({
@@ -66,7 +75,16 @@ const updatePartnerSchema = Joi.object({
     .optional()
     .messages({
       'any.only': 'Type must be either Customer or Supplier'
-    })
+    }),
+  balance: Joi.forbidden().messages({
+    'any.unknown': 'Balance is automatically calculated from transactions and cannot be set manually'
+  }),
+  paid: Joi.forbidden().messages({
+    'any.unknown': 'Paid is automatically calculated from transactions and cannot be set manually'
+  }),
+  left: Joi.forbidden().messages({
+    'any.unknown': 'Left is automatically calculated from transactions and cannot be set manually'
+  })
 }).min(1).messages({
   'object.min': 'At least one field must be provided for update'
 });

@@ -6,9 +6,21 @@ const transactionSchema = new mongoose.Schema({
     ref: "Partner",
     required: [
       function () {
-        return this.transactionType === "purchases";
+        return (
+          this.transactionType === "purchases" ||
+          this.transactionType === "deposit_suppliers" ||
+          this.transactionType === "deposit_customers"
+        );
       },
-      "Partner is required for purchase transactions",
+      function () {
+        if (
+          this.transactionType === "purchases" ||
+          this.transactionType === "deposit_suppliers" ||
+          this.transactionType === "deposit_customers"
+        ) {
+          return "Partner is required for this transactions";
+        }
+      },
     ],
   },
   products: [
@@ -35,8 +47,9 @@ const transactionSchema = new mongoose.Schema({
     type: String,
     required: [true, "Transaction type is required"],
     enum: {
-      values: ["sales", "purchases"],
-      message: "Transaction type must be either sales or purchases",
+      values: ["sales", "purchases", "deposit_suppliers", "deposit_customers"],
+      message:
+        "Transaction type must be either sales or purchases or deposit_suppliers or deposit_customers",
     },
   },
   balance: {

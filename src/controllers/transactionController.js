@@ -8,6 +8,7 @@ const createTransaction = async (req, res, next) => {
   try {
     const { partnerId, products, transactionType, balance, paid, note } =
       req.body;
+console.log("@@@@@@ transaction Type:",transactionType);
 
     // 1️⃣ Verify partner exists
     const partner = await Partner.findById(partnerId);
@@ -143,7 +144,14 @@ const createTransaction = async (req, res, next) => {
 
     await transaction.save();
 
-    // 6️⃣ Populate references conditionally
+    // 6️⃣ Recalculate partner balance, paid, and left if partner exists
+    if (transaction.partnerId) {
+      // Extract ID if partnerId is populated, otherwise use directly
+      const partnerIdToRecalc = transaction.partnerId._id || transaction.partnerId;
+      await Partner.recalculateFromTransactions(partnerIdToRecalc);
+    }
+
+    // 7️⃣ Populate references conditionally
     const populateOptions = [
       { path: "products.productId", select: "name sku costPrice" },
     ];
@@ -528,6 +536,13 @@ const updateTransaction = async (req, res, next) => {
       { new: true, runValidators: true }
     );
 
+    // Recalculate partner balance, paid, and left if partner exists
+    if (transaction.partnerId) {
+      // Extract ID if partnerId is populated, otherwise use directly
+      const partnerIdToRecalc = transaction.partnerId._id || transaction.partnerId;
+      await Partner.recalculateFromTransactions(partnerIdToRecalc);
+    }
+
     // Populate references for response
     await transaction.populate([
       { path: "products.productId", select: "name sku" },
@@ -556,13 +571,26 @@ const deleteTransaction = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const transaction = await Transaction.findByIdAndDelete(id);
+    // Get transaction before deleting to get partnerId
+    const transaction = await Transaction.findById(id);
 
     if (!transaction) {
       return res.status(404).json({
         success: false,
         message: "Transaction not found",
       });
+    }
+
+    const partnerId = transaction.partnerId;
+
+    // Delete the transaction
+    await Transaction.findByIdAndDelete(id);
+
+    // Recalculate partner balance, paid, and left if partner exists
+    if (partnerId) {
+      // Extract ID if partnerId is populated, otherwise use directly
+      const partnerIdToRecalc = partnerId._id || partnerId;
+      await Partner.recalculateFromTransactions(partnerIdToRecalc);
     }
 
     res.status(200).json({
@@ -580,7 +608,19 @@ const bulkDeleteTransactions = async (req, res, next) => {
   try {
     const { ids } = req.body;
 
+    // Get transactions before deleting to collect unique partnerIds
+    const transactions = await Transaction.find({ _id: { $in: ids } });
+    const partnerIds = [...new Set(transactions.map(t => t.partnerId).filter(Boolean))];
+
+    // Delete the transactions
     const result = await Transaction.deleteMany({ _id: { $in: ids } });
+
+    // Recalculate partner balance, paid, and left for all affected partners
+    for (const partnerId of partnerIds) {
+      // Extract ID if partnerId is populated, otherwise use directly
+      const partnerIdToRecalc = partnerId._id || partnerId;
+      await Partner.recalculateFromTransactions(partnerIdToRecalc);
+    }
 
     res.status(200).json({
       success: true,

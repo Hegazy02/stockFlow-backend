@@ -15,7 +15,6 @@ const createTransactionSchema = Joi.object({
       .optional()
       .allow(null),
   }),
-
   products: Joi.array()
     .items(
       Joi.object({
@@ -39,17 +38,21 @@ const createTransactionSchema = Joi.object({
         }),
       })
     )
-    .min(1)
-    .required()
-    .messages({
-      "array.min": "At least one product is required",
-      "any.required": "Products array is required",
+    .when("transactionType", {
+      is: Joi.valid("sales", "purchases"),
+      then: Joi.array().min(1).required().messages({
+        "any.required":
+          "Products are required for sales or purchase transactions",
+        "array.min": "At least one product is required",
+      }),
+      otherwise: Joi.array().optional(), // allows empty array for other types
     }),
   transactionType: Joi.string()
-    .valid("sales", "purchases")
+    .valid("sales", "purchases", "deposit_suppliers", "deposit_customers")
     .required()
     .messages({
-      "any.only": "Transaction type must be either sales or purchases",
+      "any.only":
+        "Transaction type must be either sales or purchases or deposit_suppliers or deposit_customers",
       "any.required": "Transaction type is required",
     }),
   balance: Joi.number().min(0).required().messages({
