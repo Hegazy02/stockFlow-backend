@@ -48,7 +48,7 @@ app.use((req, res) => {
 });
 
 // Apply global error handler middleware
-app.use(errorHandler);
+// app.use(errorHandler);
 
 // Export app for Vercel compatibility
 module.exports = app;
