@@ -10,19 +10,7 @@ require("dotenv").config();
 const app = express();
 
 // Apply CORS middleware for cross-origin requests
-// Configure CORS to work properly with Vercel serverless functions
-const corsOptions = {
-  origin: '*', // Allow all origins (use specific origins in production)
-  credentials: false, // Set to true if you need to send cookies (cannot use '*' with credentials)
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-  exposedHeaders: ['Content-Range', 'X-Content-Range'],
-  maxAge: 86400, // 24 hours
-  preflightContinue: false,
-  optionsSuccessStatus: 204
-};
-
-// Apply CORS middleware
+// This allows all origins by default (configure in production if needed)
 app.use(cors());
 
 
