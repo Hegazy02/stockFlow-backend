@@ -10,19 +10,29 @@ require("dotenv").config();
 const app = express();
 
 // Apply CORS middleware for cross-origin requests
-const allowedOrigins = ["http://localhost:4200", process.env.CLIENT_URL];
-const corsOptions = {
-  origin: function (origin, callback) {
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    } else {
-      return callback(new Error("Not allowed by CORS"));
-    }
-  },
-};
-app.use(cors(corsOptions));
+// const allowedOrigins = ["http://localhost:4200", process.env.CLIENT_URL];
+// const corsOptions = {
+//   origin: function (origin, callback) {
+//     if (!origin) return callback(null, true);
+//     if (allowedOrigins.includes(origin)) {
+//       return callback(null, true);
+//     } else {
+//       return callback(new Error("Not allowed by CORS"));
+//     }
+//   },
+// };
+// app.use(cors(corsOptions));
+/* ✅ ALLOW EVERYTHING */
+app.use(cors({
+  origin: '*',
+  methods: '*',
+  allowedHeaders: '*',
+}));
 
+app.options('*', cors());
+
+// Serve static files from the 'public' directory
+app.use(express.static(path.join(__dirname, 'public')));
 // Apply custom logger middleware
 app.use(logger);
 
