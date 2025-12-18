@@ -9,7 +9,18 @@ const routes = require('./routes');
 const app = express();
 
 // Apply CORS middleware for cross-origin requests
-app.use(cors());
+app.use(
+  cors({
+    origin: [
+      'http://localhost:4200',
+      'https://your-frontend-domain.vercel.app'
+    ],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
+  })
+);
+app.options('*', cors());
 
 // Apply JSON body parser with 10mb limit
 app.use(express.json({ limit: '10mb' }));
