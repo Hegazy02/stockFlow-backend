@@ -23,10 +23,8 @@ const corsOptions = {
 };
 
 // Apply CORS middleware
-app.use(cors(corsOptions));
+app.use(cors());
 
-// Handle preflight requests explicitly for all routes
-app.options('*', cors(corsOptions));
 
 // Serve static files from the 'public' directory
 app.use(express.static(path.join(__dirname, 'public')));
