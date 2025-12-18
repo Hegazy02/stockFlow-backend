@@ -24,15 +24,6 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
-// Apply JSON body parser with 10mb limit
-app.use(express.json({ limit: '10mb' }));
-
-// Apply URL-encoded body parser with extended syntax
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// Serve static files from public directory (for API documentation)
-app.use(express.static(path.join(__dirname, '../public')));
-
 // Apply custom logger middleware
 app.use(logger);
 
