@@ -8,7 +8,6 @@ const createTransaction = async (req, res, next) => {
   try {
     const { partnerId, products, transactionType, balance, paid, note } =
       req.body;
-console.log("@@@@@@ transaction Type:",req.transactionType);
 
     // 1️⃣ Verify partner exists
     const partner = await Partner.findById(partnerId);
@@ -684,6 +683,181 @@ const getTransactionStats = async (req, res, next) => {
   }
 };
 
+// Get all transactions for a specific partner with totals
+const getPartnerTransactions = async (req, res, next) => {
+  try {
+    const { partnerId, page = 1, limit = 10 } = req.query;
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const partnerObjectId = new mongoose.Types.ObjectId(partnerId);
+
+    // Verify partner exists
+    const partner = await Partner.findById(partnerId);
+    if (!partner) {
+      return res.status(404).json({
+        success: false,
+        message: "Partner not found",
+      });
+    }
+
+    // Pipeline to get transactions with pagination
+    const pipeline = [
+      // Match transactions for this partner
+      { $match: { partnerId: partnerObjectId } },
+
+      // Lookup products
+      {
+        $lookup: {
+          from: "products",
+          localField: "products.productId",
+          foreignField: "_id",
+          as: "productDetails",
+        },
+      },
+
+      // Combine product details with quantities
+      {
+        $addFields: {
+          products: {
+            $map: {
+              input: "$products",
+              as: "prod",
+              in: {
+                productId: "$$prod.productId",
+                quantity: "$$prod.quantity",
+                costPrice: "$$prod.costPrice",
+                productInfo: {
+                  $let: {
+                    vars: {
+                      matchedProduct: {
+                        $arrayElemAt: [
+                          {
+                            $filter: {
+                              input: "$productDetails",
+                              as: "detail",
+                              cond: { $eq: ["$$detail._id", "$$prod.productId"] },
+                            },
+                          },
+                          0,
+                        ],
+                      },
+                    },
+                    in: {
+                      _id: "$$matchedProduct._id",
+                      name: "$$matchedProduct.name",
+                      sku: "$$matchedProduct.sku",
+                      sellingPrice: "$$matchedProduct.sellingPrice",
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+
+      // Sort newest first
+      { $sort: { createdAt: -1 } },
+
+      // Pagination
+      { $skip: skip },
+      { $limit: parseInt(limit) },
+
+      // Project final structure
+      {
+        $project: {
+          _id: 1,
+          transactionType: 1,
+          createdAt: 1,
+          note: 1,
+          balance: 1,
+          paid: 1,
+          left: 1,
+          products: {
+            $map: {
+              input: "$products",
+              as: "p",
+              in: {
+                productId: "$$p.productId",
+                quantity: "$$p.quantity",
+                costPrice: {
+                  $cond: {
+                    if: { $eq: ["$transactionType", "purchases"] },
+                    then: "$$p.costPrice",
+                    else: "$$REMOVE",
+                  },
+                },
+                sellingPrice: {
+                  $cond: {
+                    if: { $eq: ["$transactionType", "sales"] },
+                    then: "$$p.productInfo.sellingPrice",
+                    else: "$$REMOVE",
+                  },
+                },
+                name: "$$p.productInfo.name",
+                sku: "$$p.productInfo.sku",
+              },
+            },
+          },
+        },
+      },
+    ];
+
+    // Pipeline to get total count
+    const countPipeline = [
+      { $match: { partnerId: partnerObjectId } },
+      { $count: "total" },
+    ];
+
+    // Pipeline to calculate totals
+    const totalsPipeline = [
+      { $match: { partnerId: partnerObjectId } },
+      {
+        $group: {
+          _id: null,
+          totalBalance: { $sum: "$balance" },
+          totalPaid: { $sum: "$paid" },
+          totalLeft: { $sum: "$left" },
+        },
+      },
+    ];
+
+    // Execute all pipelines in parallel
+    const [data, countResult, totalsResult] = await Promise.all([
+      Transaction.aggregate(pipeline),
+      Transaction.aggregate(countPipeline),
+      Transaction.aggregate(totalsPipeline),
+    ]);
+
+    const total = countResult[0]?.total || 0;
+    const totals = totalsResult[0] || {
+      totalBalance: 0,
+      totalPaid: 0,
+      totalLeft: 0,
+    };
+
+    res.status(200).json({
+      success: true,
+      data: {
+        transactions: data,
+        totals: {
+          balance: totals.totalBalance,
+          paid: totals.totalPaid,
+          left: totals.totalLeft,
+        },
+        pagination: {
+          total,
+          page: parseInt(page),
+          limit: parseInt(limit),
+          pages: Math.ceil(total / parseInt(limit)),
+        },
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createTransaction,
   getAllTransactions,
@@ -692,4 +866,5 @@ module.exports = {
   deleteTransaction,
   bulkDeleteTransactions,
   getTransactionStats,
+  getPartnerTransactions,
 };

@@ -102,9 +102,11 @@ const transactionIdSchema = Joi.object({
   id: Joi.string()
     .regex(/^[0-9a-fA-F]{24}$/)
     .required()
+    .invalid("partner", "stats", "bulk-delete")
     .messages({
       "string.pattern.base": "Invalid transaction ID format",
       "any.required": "Transaction ID is required",
+      "any.invalid": "Invalid transaction ID format",
     }),
 });
 
@@ -125,9 +127,31 @@ const bulkDeleteSchema = Joi.object({
     }),
 });
 
+const partnerTransactionsSchema = Joi.object({
+  partnerId: Joi.string()
+    .regex(/^[0-9a-fA-F]{24}$/)
+    .required()
+    .messages({
+      "string.pattern.base": "Invalid partner ID format",
+      "any.required": "Partner ID is required",
+    }),
+  page: Joi.number().integer().min(1).optional().default(1).messages({
+    "number.base": "Page must be a number",
+    "number.integer": "Page must be an integer",
+    "number.min": "Page must be at least 1",
+  }),
+  limit: Joi.number().integer().min(1).max(100).optional().default(10).messages({
+    "number.base": "Limit must be a number",
+    "number.integer": "Limit must be an integer",
+    "number.min": "Limit must be at least 1",
+    "number.max": "Limit cannot exceed 100",
+  }),
+});
+
 module.exports = {
   createTransactionSchema,
   updateTransactionSchema,
   transactionIdSchema,
   bulkDeleteSchema,
+  partnerTransactionsSchema,
 };

@@ -7,14 +7,16 @@ const {
   updateTransaction,
   deleteTransaction,
   bulkDeleteTransactions,
-  getTransactionStats
+  getTransactionStats,
+  getPartnerTransactions
 } = require('../controllers/transactionController');
 const validate = require('../middleware/validate');
 const {
   createTransactionSchema,
   updateTransactionSchema,
   transactionIdSchema,
-  bulkDeleteSchema
+  bulkDeleteSchema,
+  partnerTransactionsSchema
 } = require('../validators/transactionValidator');
 
 /**
@@ -39,6 +41,14 @@ router.post('/bulk-delete', validate(bulkDeleteSchema), bulkDeleteTransactions);
 router.get('/stats', getTransactionStats);
 
 /**
+ * @route   GET /api/transactions/partner
+ * @desc    Get all transactions for a specific partner with totals
+ * @access  Public
+ * @query   partnerId (required), page (optional, default: 1), limit (optional, default: 10)
+ */
+router.get('/partner', validate(partnerTransactionsSchema), getPartnerTransactions);
+
+/**
  * @route   GET /api/transactions
  * @desc    Get all transactions with optional filtering and pagination
  * @access  Public
@@ -50,7 +60,16 @@ router.get('/', getAllTransactions);
  * @desc    Get a single transaction by ID
  * @access  Public
  */
-router.get('/:id', validate(transactionIdSchema), getTransactionById);
+router.get('/:id', (req, res, next) => {
+  // Reject reserved route names
+  if (['partner', 'stats', 'bulk-delete'].includes(req.params.id)) {
+    return res.status(404).json({
+      success: false,
+      message: 'Route not found'
+    });
+  }
+  next();
+}, validate(transactionIdSchema), getTransactionById);
 
 /**
  * @route   PUT /api/transactions/:id
