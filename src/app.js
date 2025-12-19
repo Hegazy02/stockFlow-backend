@@ -13,6 +13,11 @@ const app = express();
 // This allows all origins by default (configure in production if needed)
 app.use(cors());
 
+// Parse JSON request bodies
+app.use(express.json());
+
+// Parse URL-encoded request bodies
+app.use(express.urlencoded({ extended: true }));
 
 // Serve static files from the 'public' directory
 app.use(express.static(path.join(__dirname, 'public')));

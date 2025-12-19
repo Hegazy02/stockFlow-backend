@@ -8,7 +8,7 @@ const createTransaction = async (req, res, next) => {
   try {
     const { partnerId, products, transactionType, balance, paid, note } =
       req.body;
-console.log("@@@@@@ transaction Type:",transactionType);
+console.log("@@@@@@ transaction Type:",req.transactionType);
 
     // 1️⃣ Verify partner exists
     const partner = await Partner.findById(partnerId);
