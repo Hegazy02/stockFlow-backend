@@ -60,16 +60,7 @@ router.get('/', getAllTransactions);
  * @desc    Get a single transaction by ID
  * @access  Public
  */
-router.get('/:id', (req, res, next) => {
-  // Reject reserved route names
-  if (['partner', 'stats', 'bulk-delete'].includes(req.params.id)) {
-    return res.status(404).json({
-      success: false,
-      message: 'Route not found'
-    });
-  }
-  next();
-}, validate(transactionIdSchema), getTransactionById);
+router.get('/:id', validate(transactionIdSchema), getTransactionById);
 
 /**
  * @route   PUT /api/transactions/:id

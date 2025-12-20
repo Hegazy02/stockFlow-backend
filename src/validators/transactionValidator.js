@@ -100,13 +100,9 @@ const updateTransactionSchema = Joi.object({
 
 const transactionIdSchema = Joi.object({
   id: Joi.string()
-    .regex(/^[0-9a-fA-F]{24}$/)
     .required()
-    .invalid("partner", "stats", "bulk-delete")
     .messages({
-      "string.pattern.base": "Invalid transaction ID format",
       "any.required": "Transaction ID is required",
-      "any.invalid": "Invalid transaction ID format",
     }),
 });
 
