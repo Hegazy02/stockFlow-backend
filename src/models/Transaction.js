@@ -82,7 +82,9 @@ const transactionSchema = new mongoose.Schema({
 
 // Pre-save hook to calculate 'left' field
 transactionSchema.pre("save", function (next) {
-  this.left = this.balance - this.paid;
+  if (this.transactionType == "sales" || this.transactionType == "purchases") {
+    this.left = this.balance - this.paid;
+  }
   next();
 });
 
@@ -97,7 +99,10 @@ transactionSchema.pre("findOneAndUpdate", function (next) {
     if (balance !== null || paid !== null) {
       // We need to fetch the current document to get missing values
       this.model.findOne(this.getQuery()).then((doc) => {
-        if (doc) {
+        if (
+          doc &&
+          (doc.transactionType == "sales" || doc.transactionType == "purchases")
+        ) {
           const newBalance = balance !== null ? balance : doc.balance;
           const newPaid = paid !== null ? paid : doc.paid;
           update.$set.left = newBalance - newPaid;

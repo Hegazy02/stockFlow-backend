@@ -118,14 +118,6 @@ const createTransaction = async (req, res, next) => {
     // 4️⃣ Validate payment
     const finalBalance = balance || 0;
     const finalPaid = paid || 0;
-    if (+finalPaid > +finalBalance) {
-      return res.status(400).json({
-        success: false,
-        message: "Paid amount cannot be more than balance",
-        balance: finalBalance,
-        paid: finalPaid,
-      });
-    }
 
     // 5️⃣ Create transaction
     const transaction = new Transaction({
@@ -890,12 +882,17 @@ const getPartnerTransactions = async (req, res, next) => {
       {
         $group: {
           _id: null,
-          balance: { $sum: "$balance" },
-          paid: { $sum: "$paid" },
-          left: { $sum: "$left" },
+          balance: { $sum: { $ifNull: ["$balance", 0] } },
+          paid: { $sum: { $ifNull: ["$paid", 0] } },
+        },
+      },
+      {
+        $addFields: {
+          left: { $subtract: ["$balance", "$paid"] },
         },
       },
     ];
+    
 
     // Run in parallel 🚀
     const [data, countResult, totalsResult] = await Promise.all([

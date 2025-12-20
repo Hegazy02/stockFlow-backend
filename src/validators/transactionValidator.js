@@ -55,19 +55,35 @@ const createTransactionSchema = Joi.object({
         "Transaction type must be either sales or purchases or deposit_suppliers or deposit_customers",
       "any.required": "Transaction type is required",
     }),
-  balance: Joi.number().min(0).required().messages({
-    "number.base": "Balance must be a number",
-    "number.min": "Balance cannot be negative",
-    "any.required": "Balance is required",
-  }),
-  paid: Joi.number()
+    balance: Joi.when("transactionType", {
+      is: Joi.valid("sales", "purchases"),
+      then: Joi.number().min(0).required().messages({
+        "number.base": "Balance must be a number",
+        "number.min": "Balance cannot be negative",
+        "any.required": "Balance is required",
+      }),
+      otherwise: Joi.number().optional().allow(null),
+    }),
+    
+    paid: Joi.number()
     .min(0)
     .default(0)
     .custom((value, helpers) => {
-      const balance = helpers.state.ancestors[0].balance;
-      if (balance !== undefined && value > balance) {
+      const { transactionType, balance } = helpers.state.ancestors[0];
+      // ✅ Only validate for sales & purchases
+      if (transactionType !== "sales" && transactionType !== "purchases") {
+        return value;
+      }
+  
+      // ✅ If balance is null/undefined, skip comparison
+      if (balance === null || balance === undefined) {
+        return value;
+      }
+  
+      if (value > balance) {
         return helpers.error("any.invalid");
       }
+  
       return value;
     })
     .messages({
@@ -75,6 +91,8 @@ const createTransactionSchema = Joi.object({
       "number.min": "Paid amount cannot be negative",
       "any.invalid": "Paid amount cannot be more than balance",
     }),
+  
+  
   note: Joi.string().trim().max(500).allow("").optional().messages({
     "string.max": "Note cannot exceed 500 characters",
   }),
