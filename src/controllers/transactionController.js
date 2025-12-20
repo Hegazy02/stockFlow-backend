@@ -146,7 +146,8 @@ const createTransaction = async (req, res, next) => {
     // 6️⃣ Recalculate partner balance, paid, and left if partner exists
     if (transaction.partnerId) {
       // Extract ID if partnerId is populated, otherwise use directly
-      const partnerIdToRecalc = transaction.partnerId._id || transaction.partnerId;
+      const partnerIdToRecalc =
+        transaction.partnerId._id || transaction.partnerId;
       await Partner.recalculateFromTransactions(partnerIdToRecalc);
     }
 
@@ -260,7 +261,9 @@ const getAllTransactions = async (req, res, next) => {
                             $filter: {
                               input: "$productDetails",
                               as: "detail",
-                              cond: { $eq: ["$$detail._id", "$$prod.productId"] },
+                              cond: {
+                                $eq: ["$$detail._id", "$$prod.productId"],
+                              },
                             },
                           },
                           0,
@@ -310,7 +313,59 @@ const getAllTransactions = async (req, res, next) => {
       { $skip: skip },
       { $limit: parseInt(limit) },
 
-      // 9️⃣ Clean up fields
+      // 9️⃣ Calculate totalQuantity and product summary
+      {
+        $addFields: {
+          totalQuantity: {
+            $cond: {
+              if: {
+                $and: [
+                  { $isArray: "$products" },
+                  { $gt: [{ $size: "$products" }, 0] },
+                ],
+              },
+              then: {
+                $reduce: {
+                  input: "$products",
+                  initialValue: 0,
+                  in: {
+                    $add: ["$$value", { $ifNull: ["$$this.quantity", 0] }],
+                  },
+                },
+              },
+              else: 0,
+            },
+          },
+          productCount: {
+            $cond: {
+              if: { $isArray: "$products" },
+              then: { $size: "$products" },
+              else: 0,
+            },
+          },
+          firstProductName: {
+            $cond: {
+              if: {
+                $and: [
+                  { $isArray: "$products" },
+                  { $gt: [{ $size: "$products" }, 0] },
+                ],
+              },
+              then: {
+                $let: {
+                  vars: {
+                    firstProduct: { $arrayElemAt: ["$products", 0] },
+                  },
+                  in: { $ifNull: ["$$firstProduct.productInfo.name", null] },
+                },
+              },
+              else: null,
+            },
+          },
+        },
+      },
+
+      // 🔟 Clean up fields and format product display
       {
         $project: {
           _id: 1,
@@ -321,33 +376,28 @@ const getAllTransactions = async (req, res, next) => {
           balance: 1,
           paid: 1,
           left: 1,
+          totalQuantity: 1,
 
           "partner.name": 1,
           "partner.type": 1,
 
-          products: {
-            $map: {
-              input: "$products",
-              as: "p",
-              in: {
-                productId: "$$p.productId",
-                quantity: "$$p.quantity",
-                costPrice: {
-                  $cond: {
-                    if: { $eq: ["$transactionType", "purchases"] },
-                    then: "$$p.costPrice",
-                    else: "$$REMOVE",
+          productDisplay: {
+            $cond: {
+              if: { $eq: ["$productCount", 0] },
+              then: null,
+              else: {
+                $cond: {
+                  if: {
+                    $and: [
+                      { $eq: ["$productCount", 1] },
+                      { $ne: ["$firstProductName", null] },
+                    ],
+                  },
+                  then: "$firstProductName",
+                  else: {
+                    $concat: [{ $toString: "$productCount" }, " products"],
                   },
                 },
-                sellingPrice: {
-                  $cond: {
-                    if: { $eq: ["$transactionType", "sales"] },
-                    then: "$$p.productInfo.sellingPrice",
-                    else: "$$REMOVE",
-                  },
-                },
-                name: "$$p.productInfo.name",
-                sku: "$$p.productInfo.sku",
               },
             },
           },
@@ -538,7 +588,8 @@ const updateTransaction = async (req, res, next) => {
     // Recalculate partner balance, paid, and left if partner exists
     if (transaction.partnerId) {
       // Extract ID if partnerId is populated, otherwise use directly
-      const partnerIdToRecalc = transaction.partnerId._id || transaction.partnerId;
+      const partnerIdToRecalc =
+        transaction.partnerId._id || transaction.partnerId;
       await Partner.recalculateFromTransactions(partnerIdToRecalc);
     }
 
@@ -609,7 +660,9 @@ const bulkDeleteTransactions = async (req, res, next) => {
 
     // Get transactions before deleting to collect unique partnerIds
     const transactions = await Transaction.find({ _id: { $in: ids } });
-    const partnerIds = [...new Set(transactions.map(t => t.partnerId).filter(Boolean))];
+    const partnerIds = [
+      ...new Set(transactions.map((t) => t.partnerId).filter(Boolean)),
+    ];
 
     // Delete the transactions
     const result = await Transaction.deleteMany({ _id: { $in: ids } });
@@ -692,20 +745,34 @@ const getPartnerTransactions = async (req, res, next) => {
     const partnerObjectId = new mongoose.Types.ObjectId(partnerId);
 
     // Verify partner exists
-    const partner = await Partner.findById(partnerId);
-    if (!partner) {
+    const partnerExists = await Partner.exists({ _id: partnerObjectId });
+    if (!partnerExists) {
       return res.status(404).json({
         success: false,
         message: "Partner not found",
       });
     }
 
-    // Pipeline to get transactions with pagination
-    const pipeline = [
-      // Match transactions for this partner
-      { $match: { partnerId: partnerObjectId } },
+    const matchStage = {
+      partnerId: partnerObjectId,
+    };
 
-      // Lookup products
+    // =======================
+    // Main data pipeline
+    // =======================
+    const pipeline = [
+      { $match: matchStage },
+
+      {
+        $lookup: {
+          from: "partners",
+          localField: "partnerId",
+          foreignField: "_id",
+          as: "partner",
+        },
+      },
+      { $unwind: { path: "$partner", preserveNullAndEmptyArrays: true } },
+
       {
         $lookup: {
           from: "products",
@@ -715,7 +782,6 @@ const getPartnerTransactions = async (req, res, next) => {
         },
       },
 
-      // Combine product details with quantities
       {
         $addFields: {
           products: {
@@ -735,7 +801,9 @@ const getPartnerTransactions = async (req, res, next) => {
                             $filter: {
                               input: "$productDetails",
                               as: "detail",
-                              cond: { $eq: ["$$detail._id", "$$prod.productId"] },
+                              cond: {
+                                $eq: ["$$detail._id", "$$prod.productId"],
+                              },
                             },
                           },
                           0,
@@ -756,14 +824,26 @@ const getPartnerTransactions = async (req, res, next) => {
         },
       },
 
-      // Sort newest first
       { $sort: { createdAt: -1 } },
-
-      // Pagination
       { $skip: skip },
       { $limit: parseInt(limit) },
 
-      // Project final structure
+      {
+        $addFields: {
+          totalQuantity: {
+            $reduce: {
+              input: "$products",
+              initialValue: 0,
+              in: { $add: ["$$value", "$$this.quantity"] },
+            },
+          },
+          productCount: { $size: "$products" },
+          firstProductName: {
+            $arrayElemAt: ["$products.productInfo.name", 0],
+          },
+        },
+      },
+
       {
         $project: {
           _id: 1,
@@ -773,29 +853,23 @@ const getPartnerTransactions = async (req, res, next) => {
           balance: 1,
           paid: 1,
           left: 1,
-          products: {
-            $map: {
-              input: "$products",
-              as: "p",
-              in: {
-                productId: "$$p.productId",
-                quantity: "$$p.quantity",
-                costPrice: {
-                  $cond: {
-                    if: { $eq: ["$transactionType", "purchases"] },
-                    then: "$$p.costPrice",
-                    else: "$$REMOVE",
+          totalQuantity: 1,
+
+          "partner.name": 1,
+          "partner.type": 1,
+
+          productDisplay: {
+            $cond: {
+              if: { $eq: ["$productCount", 0] },
+              then: null,
+              else: {
+                $cond: {
+                  if: { $eq: ["$productCount", 1] },
+                  then: "$firstProductName",
+                  else: {
+                    $concat: [{ $toString: "$productCount" }, " products"],
                   },
                 },
-                sellingPrice: {
-                  $cond: {
-                    if: { $eq: ["$transactionType", "sales"] },
-                    then: "$$p.productInfo.sellingPrice",
-                    else: "$$REMOVE",
-                  },
-                },
-                name: "$$p.productInfo.name",
-                sku: "$$p.productInfo.sku",
               },
             },
           },
@@ -803,26 +877,27 @@ const getPartnerTransactions = async (req, res, next) => {
       },
     ];
 
-    // Pipeline to get total count
-    const countPipeline = [
-      { $match: { partnerId: partnerObjectId } },
-      { $count: "total" },
-    ];
+    // =======================
+    // Count pipeline
+    // =======================
+    const countPipeline = [{ $match: matchStage }, { $count: "total" }];
 
-    // Pipeline to calculate totals
+    // =======================
+    // Totals pipeline
+    // =======================
     const totalsPipeline = [
-      { $match: { partnerId: partnerObjectId } },
+      { $match: matchStage },
       {
         $group: {
           _id: null,
-          totalBalance: { $sum: "$balance" },
-          totalPaid: { $sum: "$paid" },
-          totalLeft: { $sum: "$left" },
+          balance: { $sum: "$balance" },
+          paid: { $sum: "$paid" },
+          left: { $sum: "$left" },
         },
       },
     ];
 
-    // Execute all pipelines in parallel
+    // Run in parallel 🚀
     const [data, countResult, totalsResult] = await Promise.all([
       Transaction.aggregate(pipeline),
       Transaction.aggregate(countPipeline),
@@ -830,21 +905,13 @@ const getPartnerTransactions = async (req, res, next) => {
     ]);
 
     const total = countResult[0]?.total || 0;
-    const totals = totalsResult[0] || {
-      totalBalance: 0,
-      totalPaid: 0,
-      totalLeft: 0,
-    };
+    const totals = totalsResult[0] || { balance: 0, paid: 0, left: 0 };
 
     res.status(200).json({
       success: true,
       data: {
         transactions: data,
-        totals: {
-          balance: totals.totalBalance,
-          paid: totals.totalPaid,
-          left: totals.totalLeft,
-        },
+        totals: totals,
         pagination: {
           total,
           page: parseInt(page),
