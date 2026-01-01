@@ -182,6 +182,7 @@ const getAllTransactions = async (req, res, next) => {
       product,
       partner,
       transactionType,
+      serialNumber,
       startDate,
       endDate,
       page = 1,
@@ -195,6 +196,11 @@ const getAllTransactions = async (req, res, next) => {
     // Filter by transactionType
     if (transactionType) {
       matchStage.transactionType = transactionType;
+    }
+
+    // Filter by serialNumber
+    if (serialNumber) {
+      matchStage.serialNumber = { $regex: serialNumber, $options: "i" };
     }
 
     // Filter by date range
@@ -363,6 +369,7 @@ const getAllTransactions = async (req, res, next) => {
           _id: 1,
           partnerId: 1,
           transactionType: 1,
+          serialNumber: 1,
           createdAt: 1,
           note: 1,
           balance: 1,
@@ -428,9 +435,16 @@ const getTransactionById = async (req, res, next) => {
   try {
     const { id } = req.params;
 
+    let matchQuery = {};
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      matchQuery = { _id: new mongoose.Types.ObjectId(id) };
+    } else {
+      matchQuery = { serialNumber: id };
+    }
+
     const transactions = await Transaction.aggregate([
       // Match the specific transaction
-      { $match: { _id: new mongoose.Types.ObjectId(id) } },
+      { $match: matchQuery },
 
       // Lookup partner
       {
@@ -508,6 +522,7 @@ const getTransactionById = async (req, res, next) => {
           },
           products: 1,
           transactionType: 1,
+          serialNumber: 1,
           balance: 1,
           paid: 1,
           left: 1,
@@ -840,6 +855,7 @@ const getPartnerTransactions = async (req, res, next) => {
         $project: {
           _id: 1,
           transactionType: 1,
+          serialNumber: 1,
           createdAt: 1,
           note: 1,
           balance: 1,
@@ -892,7 +908,6 @@ const getPartnerTransactions = async (req, res, next) => {
         },
       },
     ];
-    
 
     // Run in parallel 🚀
     const [data, countResult, totalsResult] = await Promise.all([

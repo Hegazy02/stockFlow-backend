@@ -74,17 +74,41 @@ const transactionSchema = new mongoose.Schema({
     trim: true,
     maxlength: [500, "Note cannot exceed 500 characters"],
   },
+  serialNumber: {
+    type: String,
+    unique: true,
+    sparse: true, // Allow existing documents to stay null until updated
+  },
   createdAt: {
     type: Date,
     default: Date.now,
   },
 });
 
-// Pre-save hook to calculate 'left' field
-transactionSchema.pre("save", function (next) {
+// Pre-save hook to calculate 'left' field and generate serialNumber
+transactionSchema.pre("save", async function (next) {
   if (this.transactionType == "sales" || this.transactionType == "purchases") {
     this.left = this.balance - this.paid;
   }
+
+  if (!this.serialNumber) {
+    const date = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+    let isUnique = false;
+    let newSerialNumber;
+
+    while (!isUnique) {
+      const random = Math.floor(1000 + Math.random() * 9000);
+      newSerialNumber = `TRX-${date}-${random}`;
+      const existing = await this.constructor.findOne({
+        serialNumber: newSerialNumber,
+      });
+      if (!existing) {
+        isUnique = true;
+      }
+    }
+    this.serialNumber = newSerialNumber;
+  }
+
   next();
 });
 
@@ -121,6 +145,7 @@ transactionSchema.pre("findOneAndUpdate", function (next) {
 transactionSchema.index({ "products.productId": 1, createdAt: -1 });
 transactionSchema.index({ partnerId: 1, createdAt: -1 });
 transactionSchema.index({ transactionType: 1 });
+transactionSchema.index({ serialNumber: 1 }, { unique: true });
 
 const Transaction = mongoose.model("Transaction", transactionSchema);
 
