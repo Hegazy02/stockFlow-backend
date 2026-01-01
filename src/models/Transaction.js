@@ -98,7 +98,7 @@ transactionSchema.pre("save", async function (next) {
 
     while (!isUnique) {
       const random = Math.floor(1000 + Math.random() * 9000);
-      newSerialNumber = `TRX-${date}-${random}`;
+      newSerialNumber = `${date}-${random}`;
       const existing = await this.constructor.findOne({
         serialNumber: newSerialNumber,
       });
