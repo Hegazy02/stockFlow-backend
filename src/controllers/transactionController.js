@@ -493,15 +493,27 @@ const getTransactionById = async (req, res, next) => {
                     },
                   },
                   in: {
-                    product: {
-                      _id: "$$matchedProduct._id",
-                      name: "$$matchedProduct.name",
-                      sku: "$$matchedProduct.sku",
-                      sellingPrice: "$$matchedProduct.sellingPrice",
-                    },
+                    _id: "$$matchedProduct._id",
+                    name: "$$matchedProduct.name",
+                    sku: "$$matchedProduct.sku",
                     quantity: "$$prod.quantity",
                     costPrice: "$$prod.costPrice",
                     sellingPrice: "$$matchedProduct.sellingPrice",
+                    //if transactionType is sales then total = quantity * sellingPrice else total = quantity * costPrice
+                    total: {
+                      $cond: {
+                        if: { $eq: ["$transactionType", "sales"] },
+                        then: {
+                          $multiply: [
+                            "$$prod.quantity",
+                            "$$matchedProduct.sellingPrice",
+                          ],
+                        },
+                        else: {
+                          $multiply: ["$$prod.quantity", "$$prod.costPrice"],
+                        },
+                      },
+                    },
                   },
                 },
               },
