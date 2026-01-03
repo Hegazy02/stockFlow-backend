@@ -48,42 +48,53 @@ const createTransactionSchema = Joi.object({
       otherwise: Joi.array().optional(), // allows empty array for other types
     }),
   transactionType: Joi.string()
-    .valid("sales", "purchases", "deposit_suppliers", "deposit_customers")
+    .valid(
+      "sales",
+      "purchases",
+      "deposit_suppliers",
+      "deposit_customers",
+      "return_sales",
+      "return_purchases"
+    )
     .required()
     .messages({
       "any.only":
-        "Transaction type must be either sales or purchases or deposit_suppliers or deposit_customers",
+        "Transaction type must be either sales, purchases, deposit_suppliers, deposit_customers, return_sales, or return_purchases",
       "any.required": "Transaction type is required",
     }),
-    balance: Joi.when("transactionType", {
-      is: Joi.valid("sales", "purchases"),
-      then: Joi.number().min(0).required().messages({
-        "number.base": "Balance must be a number",
-        "number.min": "Balance cannot be negative",
-        "any.required": "Balance is required",
-      }),
-      otherwise: Joi.number().optional().allow(null),
+  balance: Joi.when("transactionType", {
+    is: Joi.valid("sales", "purchases"),
+    then: Joi.number().min(0).required().messages({
+      "number.base": "Balance must be a number",
+      "number.min": "Balance cannot be negative",
+      "any.required": "Balance is required",
     }),
-    
-    paid: Joi.number()
+    otherwise: Joi.number().optional().allow(null),
+  }),
+
+  paid: Joi.number()
     .min(0)
     .default(0)
     .custom((value, helpers) => {
       const { transactionType, balance } = helpers.state.ancestors[0];
-      // ✅ Only validate for sales & purchases
-      if (transactionType !== "sales" && transactionType !== "purchases") {
+      // ✅ Only validate for these types
+      if (
+        !["sales", "purchases", "return_sales", "return_purchases"].includes(
+          transactionType
+        )
+      ) {
         return value;
       }
-  
+
       // ✅ If balance is null/undefined, skip comparison
       if (balance === null || balance === undefined) {
         return value;
       }
-  
+
       if (value > balance) {
         return helpers.error("any.invalid");
       }
-  
+
       return value;
     })
     .messages({
@@ -91,8 +102,7 @@ const createTransactionSchema = Joi.object({
       "number.min": "Paid amount cannot be negative",
       "any.invalid": "Paid amount cannot be more than balance",
     }),
-  
-  
+
   note: Joi.string().trim().max(500).allow("").optional().messages({
     "string.max": "Note cannot exceed 500 characters",
   }),
@@ -117,11 +127,9 @@ const updateTransactionSchema = Joi.object({
   });
 
 const transactionIdSchema = Joi.object({
-  id: Joi.string()
-    .required()
-    .messages({
-      "any.required": "Transaction ID is required",
-    }),
+  id: Joi.string().required().messages({
+    "any.required": "Transaction ID is required",
+  }),
 });
 
 const bulkDeleteSchema = Joi.object({
@@ -141,6 +149,36 @@ const bulkDeleteSchema = Joi.object({
     }),
 });
 
+const returnProductsSchema = Joi.object({
+  products: Joi.array()
+    .items(
+      Joi.object({
+        productId: Joi.string()
+          .regex(/^[0-9a-fA-F]{24}$/)
+          .required()
+          .messages({
+            "string.pattern.base": "Invalid product ID format",
+            "any.required": "Product ID is required",
+          }),
+        quantity: Joi.number().integer().min(1).required().messages({
+          "number.base": "Quantity must be a number",
+          "number.integer": "Quantity must be an integer",
+          "number.min": "Quantity must be at least 1",
+          "any.required": "Quantity is required",
+        }),
+      })
+    )
+    .min(1)
+    .required()
+    .messages({
+      "array.min": "At least one product is required",
+      "any.required": "Products are required",
+    }),
+  note: Joi.string().trim().max(500).allow("").optional().messages({
+    "string.max": "Note cannot exceed 500 characters",
+  }),
+});
+
 const partnerTransactionsSchema = Joi.object({
   partnerId: Joi.string()
     .regex(/^[0-9a-fA-F]{24}$/)
@@ -154,12 +192,18 @@ const partnerTransactionsSchema = Joi.object({
     "number.integer": "Page must be an integer",
     "number.min": "Page must be at least 1",
   }),
-  limit: Joi.number().integer().min(1).max(100).optional().default(10).messages({
-    "number.base": "Limit must be a number",
-    "number.integer": "Limit must be an integer",
-    "number.min": "Limit must be at least 1",
-    "number.max": "Limit cannot exceed 100",
-  }),
+  limit: Joi.number()
+    .integer()
+    .min(1)
+    .max(100)
+    .optional()
+    .default(10)
+    .messages({
+      "number.base": "Limit must be a number",
+      "number.integer": "Limit must be an integer",
+      "number.min": "Limit must be at least 1",
+      "number.max": "Limit cannot exceed 100",
+    }),
 });
 
 module.exports = {
@@ -168,4 +212,5 @@ module.exports = {
   transactionIdSchema,
   bulkDeleteSchema,
   partnerTransactionsSchema,
+  returnProductsSchema,
 };

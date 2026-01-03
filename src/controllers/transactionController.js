@@ -71,10 +71,45 @@ const createTransaction = async (req, res, next) => {
                 input: "$transactions",
                 initialValue: 0,
                 in: {
-                  $cond: [
-                    { $eq: ["$$this.transactionType", "purchases"] }, // if addition (purchase)
-                    { $add: ["$$value", "$$this.quantity"] }, // increase stock
-                    { $subtract: ["$$value", "$$this.quantity"] }, // else (sales) decrease stock
+                  $add: [
+                    "$$value",
+                    {
+                      $switch: {
+                        branches: [
+                          {
+                            case: {
+                              $or: [
+                                {
+                                  $eq: ["$$this.transactionType", "purchases"],
+                                },
+                                {
+                                  $eq: [
+                                    "$$this.transactionType",
+                                    "return_sales",
+                                  ],
+                                },
+                              ],
+                            },
+                            then: "$$this.quantity",
+                          },
+                          {
+                            case: {
+                              $or: [
+                                { $eq: ["$$this.transactionType", "sales"] },
+                                {
+                                  $eq: [
+                                    "$$this.transactionType",
+                                    "return_purchases",
+                                  ],
+                                },
+                              ],
+                            },
+                            then: { $multiply: ["$$this.quantity", -1] },
+                          },
+                        ],
+                        default: 0,
+                      },
+                    },
                   ],
                 },
               },
@@ -742,13 +777,17 @@ const getTransactionStats = async (req, res, next) => {
     const formattedStats = {
       sales: { totalQuantity: 0, count: 0 },
       purchases: { totalQuantity: 0, count: 0 },
+      return_sales: { totalQuantity: 0, count: 0 },
+      return_purchases: { totalQuantity: 0, count: 0 },
     };
 
     stats.forEach((stat) => {
-      formattedStats[stat._id] = {
-        totalQuantity: stat.totalQuantity,
-        count: stat.count,
-      };
+      if (formattedStats[stat._id]) {
+        formattedStats[stat._id] = {
+          totalQuantity: stat.totalQuantity,
+          count: stat.count,
+        };
+      }
     });
 
     res.status(200).json({
@@ -954,6 +993,135 @@ const getPartnerTransactions = async (req, res, next) => {
   }
 };
 
+// Return products from a transaction
+const returnProducts = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { products, note } = req.body;
+
+    // 1️⃣ Find the original transaction
+    const originalTransaction = await Transaction.findById(id).populate(
+      "products.productId",
+      "name"
+    );
+    if (!originalTransaction) {
+      return res.status(404).json({
+        success: false,
+        message: "Original transaction not found",
+      });
+    }
+
+    if (!["sales", "purchases"].includes(originalTransaction.transactionType)) {
+      return res.status(400).json({
+        success: false,
+        message: "Returns can only be made for sales or purchases transactions",
+      });
+    }
+
+    // Determine return type
+    const returnType =
+      originalTransaction.transactionType === "sales"
+        ? "return_sales"
+        : "return_purchases";
+
+    // 2️⃣ Fetch any existing returns for this transaction to calculate remaining quantities
+    const previousReturns = await Transaction.find({
+      originalTransactionId: originalTransaction._id,
+    });
+
+    // 3️⃣ Validate returned products and quantities
+    const returnProductsData = [];
+    let totalReturnBalance = 0;
+
+    for (const returnItem of products) {
+      const originalItem = originalTransaction.products.find((p) => {
+        const prodId = p.productId._id ? p.productId._id : p.productId;
+        return prodId.toString() === returnItem.productId;
+      });
+
+      if (!originalItem) {
+        return res.status(400).json({
+          success: false,
+          message: `Product ${returnItem.productId} was not part of the original transaction`,
+        });
+      }
+
+      // Calculate already returned quantity
+      const alreadyReturned = previousReturns.reduce((sum, ret) => {
+        const item = ret.products.find(
+          (p) => p.productId.toString() === returnItem.productId
+        );
+        return sum + (item ? item.quantity : 0);
+      }, 0);
+
+      const remainingQuantity = originalItem.quantity - alreadyReturned;
+
+      // Check if quantity exceeds remaining
+      if (parseInt(returnItem.quantity) > remainingQuantity) {
+        const productName = originalItem.productId.name || "Unknown Product";
+        return res.status(400).json({
+          success: false,
+          message: `Return quantity for product ${productName} exceeds remaining quantity (${remainingQuantity}). Original: ${originalItem.quantity}, Already returned: ${alreadyReturned}`,
+        });
+      }
+
+      // Calculate balance contribution (use original price stored in transaction)
+      const priceUsed = originalItem.costPrice;
+      totalReturnBalance += priceUsed * parseInt(returnItem.quantity);
+
+      returnProductsData.push({
+        productId: returnItem.productId,
+        quantity: parseInt(returnItem.quantity),
+        costPrice: priceUsed,
+      });
+    }
+
+    // 4️⃣ Create return transaction
+    const returnTransaction = new Transaction({
+      partnerId: originalTransaction.partnerId,
+      products: returnProductsData,
+      transactionType: returnType,
+      balance: totalReturnBalance,
+      paid: 0, // Default to 0, usually returns result in credit or refund handled separately
+      note:
+        note ||
+        `Return for transaction ${
+          originalTransaction.serialNumber || originalTransaction._id
+        }`,
+      originalTransactionId: originalTransaction._id,
+    });
+
+    await returnTransaction.save();
+
+    // 5️⃣ Recalculate partner balance if exists
+    if (returnTransaction.partnerId) {
+      await Partner.recalculateFromTransactions(returnTransaction.partnerId);
+    }
+
+    // 6️⃣ Populate references for response
+    await returnTransaction.populate([
+      { path: "products.productId", select: "name sku" },
+      { path: "partnerId", select: "name type" },
+    ]);
+
+    // Format response
+    const responseData = returnTransaction.toObject();
+    responseData.products = responseData.products.map((item) => ({
+      product: item.productId,
+      quantity: item.quantity,
+      costPrice: item.costPrice,
+    }));
+
+    res.status(201).json({
+      success: true,
+      message: "Return transaction created successfully",
+      data: responseData,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createTransaction,
   getAllTransactions,
@@ -963,4 +1131,5 @@ module.exports = {
   bulkDeleteTransactions,
   getTransactionStats,
   getPartnerTransactions,
+  returnProducts,
 };

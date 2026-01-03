@@ -47,9 +47,16 @@ const transactionSchema = new mongoose.Schema({
     type: String,
     required: [true, "Transaction type is required"],
     enum: {
-      values: ["sales", "purchases", "deposit_suppliers", "deposit_customers"],
+      values: [
+        "sales",
+        "purchases",
+        "deposit_suppliers",
+        "deposit_customers",
+        "return_sales",
+        "return_purchases",
+      ],
       message:
-        "Transaction type must be either sales or purchases or deposit_suppliers or deposit_customers",
+        "Transaction type must be either sales, purchases, deposit_suppliers, deposit_customers, return_sales, or return_purchases",
     },
   },
   balance: {
@@ -79,6 +86,10 @@ const transactionSchema = new mongoose.Schema({
     unique: true,
     sparse: true, // Allow existing documents to stay null until updated
   },
+  originalTransactionId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Transaction",
+  },
   createdAt: {
     type: Date,
     default: Date.now,
@@ -87,7 +98,11 @@ const transactionSchema = new mongoose.Schema({
 
 // Pre-save hook to calculate 'left' field and generate serialNumber
 transactionSchema.pre("save", async function (next) {
-  if (this.transactionType == "sales" || this.transactionType == "purchases") {
+  if (
+    ["sales", "purchases", "return_sales", "return_purchases"].includes(
+      this.transactionType
+    )
+  ) {
     this.left = this.balance - this.paid;
   }
 
@@ -125,7 +140,9 @@ transactionSchema.pre("findOneAndUpdate", function (next) {
       this.model.findOne(this.getQuery()).then((doc) => {
         if (
           doc &&
-          (doc.transactionType == "sales" || doc.transactionType == "purchases")
+          ["sales", "purchases", "return_sales", "return_purchases"].includes(
+            doc.transactionType
+          )
         ) {
           const newBalance = balance !== null ? balance : doc.balance;
           const newPaid = paid !== null ? paid : doc.paid;
@@ -145,7 +162,6 @@ transactionSchema.pre("findOneAndUpdate", function (next) {
 transactionSchema.index({ "products.productId": 1, createdAt: -1 });
 transactionSchema.index({ partnerId: 1, createdAt: -1 });
 transactionSchema.index({ transactionType: 1 });
-transactionSchema.index({ serialNumber: 1 }, { unique: true });
 
 const Transaction = mongoose.model("Transaction", transactionSchema);
 
