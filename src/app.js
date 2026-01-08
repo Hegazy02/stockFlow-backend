@@ -1,9 +1,9 @@
-const express = require('express');
-const cors = require('cors');
-const path = require('path');
-const logger = require('./middleware/logger');
-const errorHandler = require('./middleware/errorHandler');
-const routes = require('./routes');
+const express = require("express");
+const cors = require("cors");
+const path = require("path");
+const logger = require("./middleware/logger");
+const errorHandler = require("./middleware/errorHandler");
+const routes = require("./routes");
 require("dotenv").config();
 
 // Initialize Express application
@@ -20,18 +20,23 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Serve static files from the 'public' directory
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, "..", "public")));
 // Apply custom logger middleware
 app.use(logger);
 
+// Add root route handler to serve index.html
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "..", "public", "index.html"));
+});
+
 // Mount API routes at /api prefix
-app.use('/api', routes);
+app.use("/api", routes);
 
 // 404 handler for undefined routes
 app.use((req, res) => {
   res.status(404).json({
     success: false,
-    message: 'Route not found'
+    message: "Route not found",
   });
 });
 

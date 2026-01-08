@@ -157,11 +157,21 @@ const createTransaction = async (req, res, next) => {
     // 5️⃣ Create transaction
     const transaction = new Transaction({
       partnerId: partnerId || null,
-      products: products.map((p) => ({
-        productId: p.productId,
-        quantity: parseInt(p.quantity),
-        costPrice: parseFloat(p.costPrice),
-      })),
+      products: products.map((p) => {
+        const productFromDb = existingProducts.find(
+          (ep) => ep._id.toString() === p.productId
+        );
+
+        return {
+          productId: p.productId,
+          quantity: parseInt(p.quantity),
+          // ✅ STORE PRICES (fallback to database values if not provided)
+          costPrice: parseFloat(p.costPrice ?? productFromDb.costPrice),
+          sellingPrice: parseFloat(
+            p.sellingPrice ?? productFromDb.sellingPrice
+          ),
+        };
+      }),
       transactionType,
       balance: finalBalance,
       paid: finalPaid,
@@ -198,6 +208,7 @@ const createTransaction = async (req, res, next) => {
       product: item.productId,
       quantity: item.quantity,
       costPrice: item.costPrice,
+      sellingPrice: item.sellingPrice,
     }));
 
     res.status(201).json({
@@ -285,6 +296,7 @@ const getAllTransactions = async (req, res, next) => {
               in: {
                 productId: "$$prod.productId",
                 quantity: "$$prod.quantity",
+                sellingPrice: "$$prod.sellingPrice",
                 productInfo: {
                   $let: {
                     vars: {
@@ -307,7 +319,12 @@ const getAllTransactions = async (req, res, next) => {
                       _id: "$$matchedProduct._id",
                       name: "$$matchedProduct.name",
                       sku: "$$matchedProduct.sku",
-                      sellingPrice: "$$matchedProduct.sellingPrice",
+                      sellingPrice: {
+                        $ifNull: [
+                          "$$prod.sellingPrice",
+                          "$$matchedProduct.sellingPrice",
+                        ],
+                      },
                     },
                   },
                 },
@@ -532,14 +549,21 @@ const getTransactionById = async (req, res, next) => {
                     name: "$$matchedProduct.name",
                     sku: "$$matchedProduct.sku",
                     quantity: "$$prod.quantity",
-                    //if transactionType is sales then total = quantity * sellingPrice else total = quantity * costPrice
+                    //if transactionType is sales or return_sales then total = quantity * sellingPrice else total = quantity * costPrice
                     total: {
                       $cond: {
-                        if: { $eq: ["$transactionType", "sales"] },
+                        if: {
+                          $in: ["$transactionType", ["sales", "return_sales"]],
+                        },
                         then: {
                           $multiply: [
                             "$$prod.quantity",
-                            "$$matchedProduct.sellingPrice",
+                            {
+                              $ifNull: [
+                                "$$prod.sellingPrice",
+                                "$$matchedProduct.sellingPrice",
+                              ],
+                            },
                           ],
                         },
                         else: {
@@ -549,8 +573,15 @@ const getTransactionById = async (req, res, next) => {
                     },
                     price: {
                       $cond: {
-                        if: { $eq: ["$transactionType", "sales"] },
-                        then: "$$matchedProduct.sellingPrice",
+                        if: {
+                          $in: ["$transactionType", ["sales", "return_sales"]],
+                        },
+                        then: {
+                          $ifNull: [
+                            "$$prod.sellingPrice",
+                            "$$matchedProduct.sellingPrice",
+                          ],
+                        },
                         else: "$$prod.costPrice",
                       },
                     },
@@ -855,6 +886,7 @@ const getPartnerTransactions = async (req, res, next) => {
                 productId: "$$prod.productId",
                 quantity: "$$prod.quantity",
                 costPrice: "$$prod.costPrice",
+                sellingPrice: "$$prod.sellingPrice",
                 productInfo: {
                   $let: {
                     vars: {
@@ -877,7 +909,12 @@ const getPartnerTransactions = async (req, res, next) => {
                       _id: "$$matchedProduct._id",
                       name: "$$matchedProduct.name",
                       sku: "$$matchedProduct.sku",
-                      sellingPrice: "$$matchedProduct.sellingPrice",
+                      sellingPrice: {
+                        $ifNull: [
+                          "$$prod.sellingPrice",
+                          "$$matchedProduct.sellingPrice",
+                        ],
+                      },
                     },
                   },
                 },
@@ -1066,13 +1103,17 @@ const returnProducts = async (req, res, next) => {
       }
 
       // Calculate balance contribution (use original price stored in transaction)
-      const priceUsed = originalItem.costPrice;
+      const priceUsed =
+        originalTransaction.transactionType === "sales"
+          ? originalItem.sellingPrice
+          : originalItem.costPrice;
       totalReturnBalance += priceUsed * parseInt(returnItem.quantity);
 
       returnProductsData.push({
         productId: returnItem.productId,
         quantity: parseInt(returnItem.quantity),
-        costPrice: priceUsed,
+        costPrice: originalItem.costPrice,
+        sellingPrice: originalItem.sellingPrice,
       });
     }
 
@@ -1110,6 +1151,7 @@ const returnProducts = async (req, res, next) => {
       product: item.productId,
       quantity: item.quantity,
       costPrice: item.costPrice,
+      sellingPrice: item.sellingPrice,
     }));
 
     res.status(201).json({

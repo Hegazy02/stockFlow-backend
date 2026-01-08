@@ -40,6 +40,10 @@ const transactionSchema = new mongoose.Schema({
         required: [true, "Cost price is required"],
         min: [0, "Cost price cannot be negative"],
       },
+      sellingPrice: {
+        type: Number,
+        min: [0, "Selling price cannot be negative"],
+      },
       _id: false, // Disable _id for subdocuments
     },
   ],
