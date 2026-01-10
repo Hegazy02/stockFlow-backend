@@ -102,11 +102,7 @@ const transactionSchema = new mongoose.Schema({
 
 // Pre-save hook to calculate 'left' field and generate serialNumber
 transactionSchema.pre("save", async function (next) {
-  if (
-    ["sales", "purchases", "return_sales", "return_purchases"].includes(
-      this.transactionType
-    )
-  ) {
+  if (["sales", "purchases"].includes(this.transactionType)) {
     this.left = this.balance - this.paid;
   }
 
@@ -142,12 +138,7 @@ transactionSchema.pre("findOneAndUpdate", function (next) {
     if (balance !== null || paid !== null) {
       // We need to fetch the current document to get missing values
       this.model.findOne(this.getQuery()).then((doc) => {
-        if (
-          doc &&
-          ["sales", "purchases", "return_sales", "return_purchases"].includes(
-            doc.transactionType
-          )
-        ) {
+        if (doc && ["sales", "purchases"].includes(doc.transactionType)) {
           const newBalance = balance !== null ? balance : doc.balance;
           const newPaid = paid !== null ? paid : doc.paid;
           update.$set.left = newBalance - newPaid;

@@ -32,8 +32,8 @@ const createTransaction = async (req, res, next) => {
       });
     }
 
-    // 3️⃣ Validate stock for sales
-    if (transactionType === "sales") {
+    // 3️⃣ Validate stock for sales and return_purchases
+    if (transactionType === "sales" || transactionType === "return_purchases") {
       // Compute current stock for each product
       const currentQuantities = await Product.aggregate([
         {
@@ -498,6 +498,16 @@ const getTransactionById = async (req, res, next) => {
       // Match the specific transaction
       { $match: matchQuery },
 
+      // Lookup related returns for this transaction
+      {
+        $lookup: {
+          from: "transactions",
+          localField: "_id",
+          foreignField: "originalTransactionId",
+          as: "relatedReturns",
+        },
+      },
+
       // Lookup partner
       {
         $lookup: {
@@ -509,7 +519,7 @@ const getTransactionById = async (req, res, next) => {
       },
       { $unwind: { path: "$partner", preserveNullAndEmptyArrays: true } },
 
-      // Lookup products
+      // Lookup products details
       {
         $lookup: {
           from: "products",
@@ -519,7 +529,27 @@ const getTransactionById = async (req, res, next) => {
         },
       },
 
-      // Combine product details with quantities
+      // Lookup ALL transactions for these products to calculate stock
+      {
+        $lookup: {
+          from: "transactions",
+          let: { pIds: "$products.productId" },
+          pipeline: [
+            { $unwind: "$products" },
+            { $match: { $expr: { $in: ["$products.productId", "$$pIds"] } } },
+            {
+              $project: {
+                transactionType: 1,
+                productId: "$products.productId",
+                quantity: "$products.quantity",
+              },
+            },
+          ],
+          as: "allProductsTransactions",
+        },
+      },
+
+      // Combine product details with quantities, stock, and returns
       {
         $addFields: {
           products: {
@@ -543,12 +573,116 @@ const getTransactionById = async (req, res, next) => {
                         0,
                       ],
                     },
+                    // Calculate already returned quantity from relatedReturns
+                    returnedQty: {
+                      $reduce: {
+                        input: "$relatedReturns",
+                        initialValue: 0,
+                        in: {
+                          $add: [
+                            "$$value",
+                            {
+                              $reduce: {
+                                input: "$$this.products",
+                                initialValue: 0,
+                                in: {
+                                  $add: [
+                                    "$$value",
+                                    {
+                                      $cond: [
+                                        {
+                                          $eq: [
+                                            "$$this.productId",
+                                            "$$prod.productId",
+                                          ],
+                                        },
+                                        "$$this.quantity",
+                                        0,
+                                      ],
+                                    },
+                                  ],
+                                },
+                              },
+                            },
+                          ],
+                        },
+                      },
+                    },
+                    // Calculate current stock from allProductsTransactions
+                    stock: {
+                      $reduce: {
+                        input: {
+                          $filter: {
+                            input: "$allProductsTransactions",
+                            as: "t",
+                            cond: {
+                              $eq: ["$$t.productId", "$$prod.productId"],
+                            },
+                          },
+                        },
+                        initialValue: 0,
+                        in: {
+                          $add: [
+                            "$$value",
+                            {
+                              $switch: {
+                                branches: [
+                                  {
+                                    case: {
+                                      $or: [
+                                        {
+                                          $eq: [
+                                            "$$this.transactionType",
+                                            "purchases",
+                                          ],
+                                        },
+                                        {
+                                          $eq: [
+                                            "$$this.transactionType",
+                                            "return_sales",
+                                          ],
+                                        },
+                                      ],
+                                    },
+                                    then: "$$this.quantity",
+                                  },
+                                  {
+                                    case: {
+                                      $or: [
+                                        {
+                                          $eq: [
+                                            "$$this.transactionType",
+                                            "sales",
+                                          ],
+                                        },
+                                        {
+                                          $eq: [
+                                            "$$this.transactionType",
+                                            "return_purchases",
+                                          ],
+                                        },
+                                      ],
+                                    },
+                                    then: {
+                                      $multiply: ["$$this.quantity", -1],
+                                    },
+                                  },
+                                ],
+                                default: 0,
+                              },
+                            },
+                          ],
+                        },
+                      },
+                    },
                   },
                   in: {
                     _id: "$$matchedProduct._id",
                     name: "$$matchedProduct.name",
                     sku: "$$matchedProduct.sku",
                     quantity: "$$prod.quantity",
+                    currentStock: "$$stock",
+                    alreadyReturnedQuantity: "$$returnedQty",
                     //if transactionType is sales or return_sales then total = quantity * sellingPrice else total = quantity * costPrice
                     total: {
                       $cond: {
@@ -991,8 +1125,34 @@ const getPartnerTransactions = async (req, res, next) => {
       {
         $group: {
           _id: null,
-          balance: { $sum: { $ifNull: ["$balance", 0] } },
-          paid: { $sum: { $ifNull: ["$paid", 0] } },
+          balance: {
+            $sum: {
+              $cond: {
+                if: {
+                  $in: [
+                    "$transactionType",
+                    ["return_purchases", "return_sales"],
+                  ],
+                },
+                then: { $multiply: [{ $ifNull: ["$balance", 0] }, -1] },
+                else: { $ifNull: ["$balance", 0] },
+              },
+            },
+          },
+          paid: {
+            $sum: {
+              $cond: {
+                if: {
+                  $in: [
+                    "$transactionType",
+                    ["return_purchases", "return_sales"],
+                  ],
+                },
+                then: { $multiply: [{ $ifNull: ["$paid", 0] }, -1] },
+                else: { $ifNull: ["$paid", 0] },
+              },
+            },
+          },
         },
       },
       {
@@ -1115,6 +1275,124 @@ const returnProducts = async (req, res, next) => {
         costPrice: originalItem.costPrice,
         sellingPrice: originalItem.sellingPrice,
       });
+    }
+
+    // 3.1️⃣ Validate stock for return_purchases
+    if (returnType === "return_purchases") {
+      const productIds = returnProductsData.map((p) => p.productId);
+      const currentQuantities = await Product.aggregate([
+        {
+          $match: {
+            _id: {
+              $in: productIds.map((id) => new mongoose.Types.ObjectId(id)),
+            },
+          },
+        },
+        {
+          $lookup: {
+            from: "transactions",
+            let: { productId: "$_id" },
+            pipeline: [
+              { $unwind: "$products" },
+              {
+                $match: {
+                  $expr: { $eq: ["$products.productId", "$$productId"] },
+                },
+              },
+              {
+                $project: {
+                  transactionType: 1,
+                  quantity: "$products.quantity",
+                },
+              },
+            ],
+            as: "transactions",
+          },
+        },
+        {
+          $addFields: {
+            currentQuantity: {
+              $reduce: {
+                input: "$transactions",
+                initialValue: 0,
+                in: {
+                  $add: [
+                    "$$value",
+                    {
+                      $switch: {
+                        branches: [
+                          {
+                            case: {
+                              $or: [
+                                {
+                                  $eq: ["$$this.transactionType", "purchases"],
+                                },
+                                {
+                                  $eq: [
+                                    "$$this.transactionType",
+                                    "return_sales",
+                                  ],
+                                },
+                              ],
+                            },
+                            then: "$$this.quantity",
+                          },
+                          {
+                            case: {
+                              $or: [
+                                { $eq: ["$$this.transactionType", "sales"] },
+                                {
+                                  $eq: [
+                                    "$$this.transactionType",
+                                    "return_purchases",
+                                  ],
+                                },
+                              ],
+                            },
+                            then: { $multiply: ["$$this.quantity", -1] },
+                          },
+                        ],
+                        default: 0,
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        },
+        { $project: { _id: 1, name: 1, sku: 1, currentQuantity: 1 } },
+      ]);
+
+      const insufficientProducts = [];
+      for (const product of returnProductsData) {
+        const productData = currentQuantities.find(
+          (p) => p._id.toString() === product.productId
+        );
+        if (productData) {
+          const newQuantity =
+            productData.currentQuantity - parseInt(product.quantity);
+          if (newQuantity < 0) {
+            insufficientProducts.push({
+              productId: productData._id,
+              name: productData.name,
+              sku: productData.sku,
+              currentQuantity: productData.currentQuantity,
+              requestedQuantity: parseInt(product.quantity),
+              shortage: Math.abs(newQuantity),
+            });
+          }
+        }
+      }
+
+      if (insufficientProducts.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Insufficient quantity in stock to perform this return to supplier",
+          insufficientProducts,
+        });
+      }
     }
 
     // 4️⃣ Create return transaction

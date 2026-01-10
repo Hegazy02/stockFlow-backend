@@ -39,7 +39,10 @@ const getAllPartners = async (req, res, next) => {
     if (type) {
       if (type.toLowerCase().includes("customer") || type == "sales") {
         matchStage.type = { $in: ["Customer"] };
-      } else if (type.toLowerCase().includes("supplier") || type == "purchases") {
+      } else if (
+        type.toLowerCase().includes("supplier") ||
+        type == "purchases"
+      ) {
         matchStage.type = { $in: ["Supplier"] };
       } else {
         matchStage.type = { $in: ["Customer", "Supplier"] };
@@ -95,10 +98,36 @@ const getAllPartners = async (req, res, next) => {
           createdAt: { $first: "$createdAt" },
           updatedAt: { $first: "$updatedAt" },
           balance: {
-            $sum: { $ifNull: ["$transactions.balance", 0] },
+            $sum: {
+              $cond: {
+                if: {
+                  $in: [
+                    "$transactions.transactionType",
+                    ["return_purchases", "return_sales"],
+                  ],
+                },
+                then: {
+                  $multiply: [{ $ifNull: ["$transactions.balance", 0] }, -1],
+                },
+                else: { $ifNull: ["$transactions.balance", 0] },
+              },
+            },
           },
           paid: {
-            $sum: { $ifNull: ["$transactions.paid", 0] },
+            $sum: {
+              $cond: {
+                if: {
+                  $in: [
+                    "$transactions.transactionType",
+                    ["return_purchases", "return_sales"],
+                  ],
+                },
+                then: {
+                  $multiply: [{ $ifNull: ["$transactions.paid", 0] }, -1],
+                },
+                else: { $ifNull: ["$transactions.paid", 0] },
+              },
+            },
           },
         },
       },
